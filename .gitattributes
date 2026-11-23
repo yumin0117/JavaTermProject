@@ -1,0 +1,10 @@
+*.pdf binary
+*.png binary
+*.java text eol=lf
+*.md text eol=lf
+*.xml text eol=lf
+*.py text eol=lf
+*.bat text eol=crlf
+sql/01_original_schema_and_seed.sql -text -diff
+sql/03_original_queries.sql -text -diff
+sql/04_sqldeveloper_export.sql -text -diff
