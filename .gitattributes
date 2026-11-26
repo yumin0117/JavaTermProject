@@ -10,3 +10,5 @@ sql/03_original_queries.sql -text -diff
 sql/04_sqldeveloper_export.sql -text -diff
 *.mp3 binary
 sql/07_final_sqldeveloper_export.sql -text -diff
+sql/12_final_schema_sqldeveloper_export.sql -text -diff
+*.html text eol=lf
