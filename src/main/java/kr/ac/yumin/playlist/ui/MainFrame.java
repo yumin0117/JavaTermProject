@@ -1,210 +1,919 @@
 package kr.ac.yumin.playlist.ui;
 
+import kr.ac.yumin.playlist.audio.AudioPlayer;
 import kr.ac.yumin.playlist.model.*;
 import kr.ac.yumin.playlist.service.*;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.*;
+import java.util.*;
 import java.util.List;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.table.*;
 
+/** 로그인 화면 없이 열리는 음악 앱. 목록·이용권·저장은 모두 Oracle 서비스에서 읽는다. */
 public final class MainFrame extends JFrame {
-    private final PlaylistService service;
-    private List<Playlist> mine = List.of(), publicLists = List.of();
-    private final DefaultTableModel ownModel = Ui.model("번호", "제목", "공개 여부", "좋아요", "생성일");
-    private final DefaultTableModel publicModel = Ui.model("번호", "제목", "작성자", "좋아요", "내 좋아요");
-    private final JTable ownTable = Ui.table(ownModel), publicTable = Ui.table(publicModel);
-    private final JTextField query = new JTextField(25);
-    private final JLabel status = new JLabel("목록을 불러오는 중입니다.");
+    private Member member;
+    private PlaylistService playlists;
+    private MusicLibraryService library;
+    private MembershipService membership;
+    private List<MediaTrack> tracks = List.of(), shownTracks = List.of();
+    private List<Playlist> mine = List.of(), shared = List.of();
+    private PassStatus pass = PassStatus.free();
+    private final AudioPlayer player = new AudioPlayer();
+    private final JPanel content = new JPanel(new BorderLayout()), sidebar = Ui.column();
+    private final JLabel connection = Ui.muted("보관함을 연결하는 중입니다."),
+            sectionTitle = Ui.text("둘러보기", 15, true);
+    private final JTextField search = new JTextField(23);
+    private final Map<String, JButton> navigation = new LinkedHashMap<>();
+    private final JLabel nowTitle = Ui.text("음악을 선택해 주세요", 13, true),
+            nowArtist = Ui.muted("좋아하는 곡을 찾아 들어보세요"),
+            time = Ui.muted("0:00 / 0:00"),
+            playMode = Ui.muted("무료 · 1분 미리듣기");
+    private final JLabel nowArt = new JLabel(new MusicArt(0, 48));
+    private final JButton playButton, planButton;
+    private final JSlider progress = new JSlider(0, 60, 0);
+    private final javax.swing.Timer clock;
+    private String page = "홈", filter = "전체";
+    private boolean loading, updatingSlider, limitAnnounced;
+    private MediaTrack selected;
 
-    public MainFrame(Member member) {
-        super("음악 플레이리스트 공유 시스템");
-        service = new PlaylistService(member);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(1120, 760);
-        setMinimumSize(new Dimension(850, 580));
-        JPanel root = new JPanel(new BorderLayout(0, 20));
-        root.setBorder(BorderFactory.createEmptyBorder(25, 28, 20, 28));
-        JPanel header = new JPanel(new BorderLayout());
-        header.add(Ui.heading("나의 음악, 우리의 플레이리스트"), BorderLayout.WEST);
-        header.add(
-                Ui.row(
-                        new JLabel(member.nickname() + " 님"),
-                        Ui.button(
-                                "로그아웃",
-                                () -> {
-                                    dispose();
-                                    new AuthFrame().setVisible(true);
-                                })),
-                BorderLayout.EAST);
-        root.add(header, BorderLayout.NORTH);
-        JTabbedPane tabs = new JTabbedPane();
-        JPanel own = new JPanel(new BorderLayout(0, 10));
-        own.add(
-                Ui.row(
-                        Ui.button(
-                                "새 플레이리스트",
-                                () ->
-                                        PlaylistEditor.open(
-                                                this,
-                                                null,
-                                                v ->
-                                                        Ui.work(
-                                                                this,
-                                                                () ->
-                                                                        service.create(
-                                                                                v.title(),
-                                                                                v.description(),
-                                                                                v.isPublic()),
-                                                                id -> refresh()))),
-                        Ui.button("상세 보기 / 곡 관리", () -> openSelected(true)),
-                        Ui.button("수정", this::edit),
-                        Ui.button("삭제", this::delete),
-                        Ui.button("새로고침", this::refresh)),
-                BorderLayout.NORTH);
-        own.add(new JScrollPane(ownTable), BorderLayout.CENTER);
-        tabs.addTab("내 플레이리스트", own);
-        JPanel shared = new JPanel(new BorderLayout(0, 10));
-        shared.add(
-                Ui.row(
-                        new JLabel("제목 검색"),
-                        query,
-                        Ui.button("검색", this::refresh),
-                        Ui.button("상세 보기", () -> openSelected(false)),
-                        Ui.button("좋아요 / 취소", this::like)),
-                BorderLayout.NORTH);
-        shared.add(new JScrollPane(publicTable), BorderLayout.CENTER);
-        tabs.addTab("공개 플레이리스트", shared);
-        root.add(tabs, BorderLayout.CENTER);
-        root.add(status, BorderLayout.SOUTH);
+    public MainFrame() {
+        this(null);
+    }
+
+    public MainFrame(Member initialMember) {
+        super("muse · 음악 플레이리스트");
+        member = initialMember;
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setSize(1280, 900);
+        setMinimumSize(new Dimension(1060, 740));
+        JPanel root = new JPanel(new BorderLayout());
+        root.add(buildSidebar(), BorderLayout.WEST);
+        JPanel main = new JPanel(new BorderLayout());
+        main.add(buildHeader(), BorderLayout.NORTH);
+        main.add(content, BorderLayout.CENTER);
+        root.add(main, BorderLayout.CENTER);
+        playButton =
+                iconButton(
+                        "play",
+                        24,
+                        Ui.ACCENT,
+                        () -> {
+                            if (player.playing()) {
+                                player.togglePause();
+                            } else if (selected != null) play(selected);
+                        });
+        planButton = Ui.primary("Plus 이용권", this::openMembership);
+        root.add(buildPlayer(), BorderLayout.SOUTH);
         setContentPane(root);
         setLocationRelativeTo(null);
-        query.addActionListener(e -> refresh());
-        ownTable.addMouseListener(
-                new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        if (e.getClickCount() == 2) openSelected(true);
+        search.putClientProperty("JTextField.placeholderText", "곡, 가수, 앨범 검색");
+        search.putClientProperty("JTextField.leadingIcon", new MuseIcon("search", 16, Ui.MUTED));
+        search.addActionListener(
+                e -> {
+                    page = "전체 곡";
+                    render();
+                });
+        clock = new javax.swing.Timer(200, e -> tick());
+        clock.start();
+        addWindowListener(
+                new WindowAdapter() {
+                    @Override
+                    public void windowClosed(WindowEvent e) {
+                        clock.stop();
+                        player.close();
                     }
                 });
-        publicTable.addMouseListener(
-                new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        if (e.getClickCount() == 2) openSelected(false);
-                    }
-                });
+        render();
         SwingUtilities.invokeLater(this::refresh);
     }
 
-    private record Lists(List<Playlist> mine, List<Playlist> shared) {}
+    private JPanel buildSidebar() {
+        sidebar.setBackground(new Color(247, 247, 249));
+        sidebar.setPreferredSize(new Dimension(226, 650));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(30, 18, 22, 18));
+        JLabel logo = Ui.text("muse.", 36, true);
+        logo.setForeground(Ui.ACCENT);
+        logo.setBorder(BorderFactory.createEmptyBorder(0, 12, 28, 0));
+        logo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sidebar.add(logo);
+        JLabel tag = Ui.muted("나의 일상에, 음악");
+        tag.setBorder(BorderFactory.createEmptyBorder(0, 13, 20, 0));
+        sidebar.add(tag);
+        String[][] items = {
+            {"홈", "home"},
+            {"전체 곡", "music"},
+            {"내 플레이리스트", "library"},
+            {"공개 플레이리스트", "search"},
+            {"좋아요한 목록", "heart"}
+        };
+        for (String[] item : items) {
+            JButton b = Ui.button(item[0], () -> navigate(item[0]));
+            b.setIcon(new MuseIcon(item[1], 19, Ui.MUTED));
+            b.setHorizontalAlignment(SwingConstants.LEFT);
+            b.setIconTextGap(12);
+            b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            navigation.put(item[0], b);
+            sidebar.add(b);
+            sidebar.add(Box.createVerticalStrut(5));
+        }
+        sidebar.add(Box.createVerticalStrut(24));
+        JButton create = Ui.quiet("새 플레이리스트", this::create);
+        create.setIcon(new MuseIcon("plus", 17, Ui.ACCENT));
+        create.setBackground(sidebar.getBackground());
+        create.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        sidebar.add(create);
+        sidebar.add(Box.createVerticalGlue());
+        JPanel plus = new JPanel(new BorderLayout(0, 8));
+        plus.setBackground(new Color(237, 235, 242));
+        plus.setBorder(BorderFactory.createEmptyBorder(16, 14, 14, 14));
+        plus.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
+        JPanel words = Ui.column();
+        words.setOpaque(false);
+        words.add(Ui.text("muse plus", 18, true));
+        words.add(Box.createVerticalStrut(8));
+        words.add(Ui.muted("1분을 넘어, 음악 끝까지."));
+        plus.add(words, BorderLayout.CENTER);
+        JButton more = Ui.button("이용권 알아보기", this::openMembership);
+        more.setFont(more.getFont().deriveFont(11f));
+        plus.add(more, BorderLayout.SOUTH);
+        sidebar.add(plus);
+        sidebar.add(Box.createVerticalStrut(24));
+        sidebar.add(Ui.text("나의 보관함", 13, true));
+        sidebar.add(Box.createVerticalStrut(5));
+        sidebar.add(Ui.muted("이 PC의 개인 음악 공간"));
+        for (Component child : sidebar.getComponents())
+            if (child instanceof JComponent component)
+                component.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return sidebar;
+    }
+
+    private JPanel buildHeader() {
+        JPanel header = new JPanel(new BorderLayout(15, 0));
+        header.setBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(239, 239, 243)),
+                        BorderFactory.createEmptyBorder(17, 30, 16, 30)));
+        header.add(sectionTitle, BorderLayout.WEST);
+        JPanel tools =
+                Ui.row(
+                        search,
+                        Ui.quiet("차트 갱신", this::updateChart),
+                        Ui.quiet("연결 설정", () -> ConnectionDialog.open(this, this::refresh)));
+        tools.setBorder(BorderFactory.createEmptyBorder());
+        header.add(tools, BorderLayout.EAST);
+        return header;
+    }
+
+    private JPanel buildPlayer() {
+        JPanel footer = new JPanel(new BorderLayout(24, 0));
+        footer.setPreferredSize(new Dimension(1100, 98));
+        footer.setBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(234, 234, 240)),
+                        BorderFactory.createEmptyBorder(15, 24, 14, 24)));
+        JPanel left = new JPanel(new BorderLayout(12, 0));
+        left.setPreferredSize(new Dimension(275, 58));
+        left.add(nowArt, BorderLayout.WEST);
+        JPanel names = Ui.column();
+        names.add(Box.createVerticalStrut(7));
+        names.add(nowTitle);
+        names.add(Box.createVerticalStrut(5));
+        names.add(nowArtist);
+        left.add(names, BorderLayout.CENTER);
+        footer.add(left, BorderLayout.WEST);
+        JPanel middle = new JPanel(new BorderLayout(8, 0));
+        middle.add(
+                Ui.row(
+                        iconButton("previous", 18, Ui.MUTED, () -> skip(-1)),
+                        playButton,
+                        iconButton("next", 18, Ui.MUTED, () -> skip(1))),
+                BorderLayout.WEST);
+        JPanel seek = Ui.column();
+        JPanel labels = new JPanel(new BorderLayout());
+        labels.add(playMode, BorderLayout.WEST);
+        labels.add(time, BorderLayout.EAST);
+        seek.add(Box.createVerticalStrut(8));
+        seek.add(labels);
+        seek.add(progress);
+        middle.add(seek, BorderLayout.CENTER);
+        footer.add(middle, BorderLayout.CENTER);
+        JSlider volume = new JSlider(0, 100, 65);
+        volume.setPreferredSize(new Dimension(85, 25));
+        volume.setToolTipText("음량");
+        volume.addChangeListener(e -> player.volume(volume.getValue() / 100f));
+        JPanel right = Ui.row(new JLabel(new MuseIcon("volume", 19, Ui.MUTED)), volume, planButton);
+        right.setPreferredSize(new Dimension(265, 55));
+        footer.add(right, BorderLayout.EAST);
+        progress.setToolTipText("재생 위치 · 무료 이용은 1분까지 이동할 수 있습니다.");
+        progress.addChangeListener(
+                e -> {
+                    if (!updatingSlider && !progress.getValueIsAdjusting())
+                        player.seek(progress.getValue());
+                });
+        return footer;
+    }
+
+    private JButton iconButton(String name, int size, Color color, Runnable action) {
+        JButton b = Ui.quiet("", action);
+        b.setIcon(new MuseIcon(name, size, color));
+        b.setMargin(new Insets(8, 7, 8, 7));
+        b.setToolTipText(
+                switch (name) {
+                    case "play" -> "재생 / 일시정지";
+                    case "next" -> "다음 곡";
+                    case "previous" -> "이전 곡";
+                    default -> name;
+                });
+        return b;
+    }
+
+    private void navigate(String next) {
+        page = next;
+        filter = "전체";
+        search.setText("");
+        render();
+    }
 
     public void refresh() {
-        String q = query.getText();
-        status.setText("목록을 불러오는 중입니다.");
+        if (loading) return;
+        loading = true;
+        connection.setText("음악 보관함을 불러오고 있습니다.");
+        Member current = member;
+        new SwingWorker<Loaded, Void>() {
+            protected Loaded doInBackground() throws Exception {
+                Member resolved = current == null ? new LocalProfileService().resolve() : current;
+                PlaylistService ps = new PlaylistService(resolved);
+                MusicLibraryService ms = new MusicLibraryService(resolved);
+                MembershipService membershipService = new MembershipService(resolved);
+                List<Playlist> publicLists =
+                        ps.discover("").stream()
+                                .filter(
+                                        p ->
+                                                p.owner().startsWith("local_")
+                                                        || p.owner().equals(resolved.id()))
+                                .toList();
+                return new Loaded(
+                        resolved,
+                        ps,
+                        ms,
+                        membershipService,
+                        ms.catalog(),
+                        ps.mine(),
+                        publicLists,
+                        membershipService.status());
+            }
+
+            protected void done() {
+                loading = false;
+                if (!isDisplayable()) return;
+                try {
+                    Loaded d = get();
+                    member = d.member();
+                    playlists = d.playlists();
+                    library = d.library();
+                    membership = d.membership();
+                    tracks = d.tracks();
+                    mine = d.mine();
+                    shared = d.shared();
+                    pass = d.pass();
+                    player.updatePass(pass);
+                    connection.setText(
+                            "연결됨 · 차트 정보 " + tracks.size() + "곡 · 나의 플레이리스트 " + mine.size() + "개");
+                } catch (Exception e) {
+                    library = null;
+                    playlists = null;
+                    membership = null;
+                    tracks = List.of();
+                    mine = List.of();
+                    shared = List.of();
+                    pass = PassStatus.free();
+                    player.stop();
+                    connection.setText("음악 보관함 연결이 필요합니다. 연결 설정에서 Oracle 접속 정보를 확인해 주세요.");
+                }
+                render();
+            }
+        }.execute();
+    }
+
+    private record Loaded(
+            Member member,
+            PlaylistService playlists,
+            MusicLibraryService library,
+            MembershipService membership,
+            List<MediaTrack> tracks,
+            List<Playlist> mine,
+            List<Playlist> shared,
+            PassStatus pass) {}
+
+    private void render() {
+        for (var entry : navigation.entrySet()) {
+            boolean on = entry.getKey().equals(page);
+            entry.getValue()
+                    .putClientProperty(
+                            "FlatLaf.style",
+                            "background:"
+                                    + (on ? "#FCE7EC" : "#F7F7F9")
+                                    + "; foreground:"
+                                    + (on ? "#D73250" : "#757681")
+                                    + "; borderWidth:0; arc:12");
+        }
+        sectionTitle.setText(page);
+        content.removeAll();
+        JPanel body = Ui.column();
+        body.setBorder(BorderFactory.createEmptyBorder(24, 32, 26, 32));
+        JPanel banner = new JPanel(new BorderLayout());
+        banner.setAlignmentX(Component.LEFT_ALIGNMENT);
+        banner.add(connection, BorderLayout.CENTER);
+        banner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        body.add(banner);
+        body.add(Box.createVerticalStrut(17));
+        if (page.equals("홈")) renderHome(body);
+        else if (page.equals("전체 곡")) renderSongs(body);
+        else renderPlaylists(body);
+        content.add(Ui.scroll(body), BorderLayout.CENTER);
+        content.revalidate();
+        content.repaint();
+        updatePassLabel();
+    }
+
+    private void append(JPanel body, JComponent component) {
+        component.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(component);
+    }
+
+    private void renderHome(JPanel body) {
+        append(body, Ui.text("오늘, 어떤 음악을 들을까요?", 27, true));
+        body.add(Box.createVerticalStrut(8));
+        append(body, Ui.muted("익숙한 명곡부터 새로운 취향까지, 음악이 머무는 곳."));
+        body.add(Box.createVerticalStrut(23));
+        JPanel hero =
+                new JPanel(new BorderLayout()) {
+                    protected void paintComponent(Graphics graphics) {
+                        Graphics2D g = (Graphics2D) graphics.create();
+                        g.setRenderingHint(
+                                RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g.setPaint(
+                                new GradientPaint(
+                                        0,
+                                        0,
+                                        new Color(31, 54, 58),
+                                        getWidth(),
+                                        getHeight(),
+                                        new Color(75, 106, 96)));
+                        g.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
+                        g.setColor(new Color(223, 223, 178, 40));
+                        for (int i = 0; i < 9; i++)
+                            g.drawOval(
+                                    getWidth() - 260 - i * 18,
+                                    -50 - i * 18,
+                                    280 + i * 36,
+                                    280 + i * 36);
+                        g.dispose();
+                    }
+                };
+        hero.setOpaque(false);
+        hero.setBorder(BorderFactory.createEmptyBorder(21, 26, 20, 26));
+        hero.setPreferredSize(new Dimension(800, 166));
+        hero.setMaximumSize(new Dimension(Integer.MAX_VALUE, 166));
+        JPanel heroText = Ui.column();
+        heroText.setOpaque(false);
+        JLabel eyebrow = Ui.text("MELON TOP100 · DATABASE LIBRARY", 10, true);
+        eyebrow.setForeground(new Color(205, 221, 209));
+        heroText.add(eyebrow);
+        heroText.add(Box.createVerticalStrut(9));
+        JLabel title = Ui.text("지금 가장 많이 듣는 음악", 26, true);
+        title.setForeground(Color.WHITE);
+        heroText.add(title);
+        heroText.add(Box.createVerticalStrut(10));
+        JLabel subtitle =
+                Ui.text(
+                        tracks.isEmpty()
+                                ? "멜론 TOP100을 나만의 플레이리스트로."
+                                : tracks.get(0).chartAt() + " 기준 · Oracle에 저장된 TOP100",
+                        12,
+                        false);
+        subtitle.setForeground(new Color(221, 229, 222));
+        heroText.add(subtitle);
+        heroText.add(Box.createVerticalStrut(12));
+        JButton listen = Ui.button("음악 둘러보기  →", () -> navigate("전체 곡"));
+        listen.putClientProperty(
+                "FlatLaf.style",
+                "background:#FFFFFF;foreground:#29473D;arc:999;borderWidth:0;margin:5,14,5,14");
+        heroText.add(listen);
+        hero.add(heroText, BorderLayout.CENTER);
+        JLabel disc =
+                new JLabel(
+                        tracks.isEmpty() ? new MusicArt(0, 120) : new AlbumArt(tracks.get(0), 120));
+        disc.setBorder(BorderFactory.createEmptyBorder(0, 18, 0, 10));
+        hero.add(disc, BorderLayout.EAST);
+        append(body, hero);
+        body.add(Box.createVerticalStrut(24));
+        append(body, section("TOP 4 · 지금 인기 있는 곡", Ui.quiet("전체 보기  →", () -> navigate("전체 곡"))));
+        body.add(Box.createVerticalStrut(13));
+        if (tracks.isEmpty()) append(body, empty("음악 보관함을 연결해 주세요", "연결하면 실제 곡과 앨범이 이곳에 표시됩니다."));
+        else {
+            JPanel cards = new JPanel(new GridLayout(1, 4, 18, 0));
+            cards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 255));
+            cards.setPreferredSize(new Dimension(800, 255));
+            for (MediaTrack t : tracks.stream().limit(4).toList()) cards.add(trackCard(t));
+            append(body, cards);
+        }
+        body.add(Box.createVerticalStrut(23));
+        append(body, section("멜론 TOP100", Ui.quiet("선택한 곡 담기", () -> addSelected())));
+        body.add(Box.createVerticalStrut(9));
+        append(body, songTable(tracks));
+    }
+
+    private JPanel section(String title, JButton action) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        p.add(Ui.text(title, 19, true), BorderLayout.WEST);
+        p.add(action, BorderLayout.EAST);
+        return p;
+    }
+
+    private JPanel trackCard(MediaTrack track) {
+        JPanel card = new JPanel(new BorderLayout(0, 9));
+        JLabel cover = new JLabel(new AlbumArt(track, 175));
+        card.add(cover, BorderLayout.CENTER);
+        JPanel words = Ui.column();
+        JLabel title = Ui.text(track.song().title(), 12, true);
+        title.setToolTipText(track.song().title());
+        words.add(title);
+        words.add(Box.createVerticalStrut(5));
+        words.add(Ui.muted(track.song().artists()));
+        card.add(words, BorderLayout.SOUTH);
+        MouseAdapter click =
+                new MouseAdapter() {
+                    public void mouseClicked(MouseEvent e) {
+                        select(track);
+                        play(track);
+                    }
+                };
+        cover.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        cover.addMouseListener(click);
+        card.setToolTipText("곡 정보 / 재생 · " + track.song().title());
+        return card;
+    }
+
+    private void renderSongs(JPanel body) {
+        append(body, Ui.text("멜론 TOP100", 29, true));
+        body.add(Box.createVerticalStrut(9));
+        append(body, Ui.muted("멜론 차트에서 수집한 100곡 · 곡 정보 저장 / 보유 음원 연결"));
+        body.add(Box.createVerticalStrut(22));
+        JPanel pills = Ui.row();
+        pills.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        for (String category : new String[] {"전체", "TOP 10", "TOP 50", "음원 연결됨"}) {
+            JButton b =
+                    Ui.button(
+                            category,
+                            () -> {
+                                filter = category;
+                                render();
+                            });
+            b.putClientProperty("FlatLaf.styleClass", category.equals(filter) ? "primary" : "pill");
+            pills.add(b);
+        }
+        append(body, pills);
+        body.add(Box.createVerticalStrut(14));
+        String q = search.getText().strip().toLowerCase(Locale.ROOT);
+        shownTracks =
+                tracks.stream()
+                        .filter(
+                                t ->
+                                        switch (filter) {
+                                            case "TOP 10" -> t.rank() <= 10;
+                                            case "TOP 50" -> t.rank() <= 50;
+                                            case "음원 연결됨" -> t.playable();
+                                            default -> true;
+                                        })
+                        .filter(
+                                t ->
+                                        (t.song().title()
+                                                        + " "
+                                                        + t.song().artists()
+                                                        + " "
+                                                        + t.song().album())
+                                                .toLowerCase(Locale.ROOT)
+                                                .contains(q))
+                        .toList();
+        append(
+                body,
+                section("모든 곡  ·  " + shownTracks.size(), Ui.quiet("선택한 곡 담기", this::addSelected)));
+        body.add(Box.createVerticalStrut(10));
+        append(body, songTable(shownTracks));
+        if (shownTracks.isEmpty())
+            append(
+                    body,
+                    empty(
+                            tracks.isEmpty() ? "연결된 음악이 없습니다" : "검색 결과가 없습니다",
+                            tracks.isEmpty()
+                                    ? "상단 연결 설정에서 보관함을 연결해 주세요."
+                                    : "다른 제목이나 가수 이름으로 검색해 보세요."));
+    }
+
+    private JComponent songTable(List<MediaTrack> rows) {
+        DefaultTableModel model = Ui.model("순위", "곡 / 가수", "앨범", "재생", "");
+        for (int i = 0; i < rows.size(); i++) {
+            Song s = rows.get(i).song();
+            model.addRow(
+                    new Object[] {
+                        rows.get(i).rank(),
+                        s.title(),
+                        s.album(),
+                        rows.get(i).playable() ? s.duration() : "정보",
+                        "+"
+                    });
+        }
+        JTable table = Ui.table(model);
+        table.setRowHeight(58);
+        table.getColumnModel().getColumn(0).setMaxWidth(42);
+        table.getColumnModel().getColumn(3).setMaxWidth(67);
+        table.getColumnModel().getColumn(4).setMaxWidth(42);
+        table.getColumnModel().getColumn(1).setPreferredWidth(340);
+        table.getColumnModel().getColumn(2).setPreferredWidth(240);
+        table.getColumnModel()
+                .getColumn(1)
+                .setCellRenderer(
+                        (t, value, isSelected, focus, row, column) -> {
+                            MediaTrack track = rows.get(row);
+                            JPanel panel = new JPanel(new BorderLayout(11, 0));
+                            panel.setBackground(
+                                    isSelected ? new Color(255, 240, 243) : Color.WHITE);
+                            panel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+                            panel.add(new JLabel(new AlbumArt(track, 40)), BorderLayout.WEST);
+                            JPanel text = Ui.column();
+                            text.setOpaque(false);
+                            text.add(Box.createVerticalStrut(3));
+                            text.add(Ui.text(track.song().title(), 12, true));
+                            text.add(Box.createVerticalStrut(4));
+                            text.add(Ui.muted(track.song().artists()));
+                            panel.add(text, BorderLayout.CENTER);
+                            return panel;
+                        });
+        table.getSelectionModel()
+                .addListSelectionListener(
+                        e -> {
+                            int row = table.getSelectedRow();
+                            if (row >= 0) select(rows.get(row));
+                        });
+        table.addMouseListener(
+                new MouseAdapter() {
+                    public void mouseClicked(MouseEvent e) {
+                        int row = table.rowAtPoint(e.getPoint());
+                        if (row < 0) return;
+                        select(rows.get(row));
+                        if (table.columnAtPoint(e.getPoint()) == 4) addSelected();
+                        else if (e.getClickCount() == 2) play(rows.get(row));
+                    }
+                });
+        table.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "listen");
+        table.getActionMap()
+                .put(
+                        "listen",
+                        new AbstractAction() {
+                            public void actionPerformed(ActionEvent e) {
+                                if (selected != null) play(selected);
+                            }
+                        });
+        JScrollPane scroll = Ui.scroll(table);
+        int height = 36 + Math.max(1, rows.size()) * 58;
+        scroll.setPreferredSize(new Dimension(780, Math.min(430, height)));
+        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, Math.min(430, height)));
+        return scroll;
+    }
+
+    private void renderPlaylists(JPanel body) {
+        append(body, section(page, Ui.primary("+ 새 플레이리스트", this::create)));
+        body.add(Box.createVerticalStrut(10));
+        append(
+                body,
+                Ui.muted(
+                        page.equals("내 플레이리스트")
+                                ? "내 취향으로 채운 음악들을 한곳에."
+                                : "다른 사람의 취향을 발견하고 좋아요로 저장하세요."));
+        body.add(Box.createVerticalStrut(25));
+        List<Playlist> rows =
+                page.equals("내 플레이리스트")
+                        ? mine
+                        : shared.stream()
+                                .filter(p -> !page.equals("좋아요한 목록") || p.liked())
+                                .toList();
+        if (rows.isEmpty()) {
+            append(
+                    body,
+                    empty(
+                            "아직 플레이리스트가 없어요",
+                            page.equals("내 플레이리스트")
+                                    ? "새 플레이리스트를 만들고 좋아하는 음악을 담아보세요."
+                                    : "공개한 플레이리스트가 이곳에 모입니다."));
+            return;
+        }
+        JPanel grid = new JPanel(new GridLayout(0, 3, 20, 20));
+        for (Playlist p : rows) {
+            JPanel card = new JPanel(new BorderLayout(0, 10));
+            MusicArt art = new MusicArt(p.id(), 190);
+            card.add(art, BorderLayout.CENTER);
+            JPanel words = Ui.column();
+            words.add(Ui.text(p.title(), 15, true));
+            words.add(Box.createVerticalStrut(7));
+            words.add(
+                    Ui.muted(
+                            p.nickname()
+                                    + " · "
+                                    + (p.isPublic() ? "공개" : "비공개")
+                                    + " · 좋아요 "
+                                    + p.likes()));
+            words.add(
+                    Ui.row(
+                            Ui.quiet("열기", () -> open(p)),
+                            Ui.quiet(p.liked() ? "좋아요 취소" : "좋아요", () -> like(p))));
+            if (member != null && p.owner().equals(member.id()))
+                words.add(Ui.row(Ui.quiet("수정", () -> edit(p)), Ui.quiet("삭제", () -> delete(p))));
+            card.add(words, BorderLayout.SOUTH);
+            grid.add(card);
+            art.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            art.addMouseListener(
+                    new MouseAdapter() {
+                        public void mouseClicked(MouseEvent e) {
+                            open(p);
+                        }
+                    });
+        }
+        int h = ((rows.size() + 2) / 3) * 335;
+        grid.setPreferredSize(new Dimension(780, h));
+        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
+        append(body, grid);
+    }
+
+    private JPanel empty(String title, String subtitle) {
+        JPanel p = Ui.column();
+        p.setBorder(BorderFactory.createEmptyBorder(30, 20, 30, 20));
+        p.add(Ui.text(title, 17, true));
+        p.add(Box.createVerticalStrut(9));
+        p.add(Ui.muted(subtitle));
+        p.setPreferredSize(new Dimension(700, 120));
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 135));
+        return p;
+    }
+
+    private boolean requireConnection() {
+        if (playlists == null || library == null || membership == null) {
+            ConnectionDialog.open(this, this::refresh);
+            return false;
+        }
+        return true;
+    }
+
+    private void select(MediaTrack track) {
+        selected = track;
+        if (!player.playing()) {
+            nowTitle.setText(track.song().title());
+            nowArtist.setText(track.song().artists());
+            nowArt.setIcon(new AlbumArt(track, 48));
+            time.setText("0:00 / " + track.song().duration());
+        }
+    }
+
+    private void play(MediaTrack track) {
+        if (!requireConnection()) return;
+        if (!track.playable()) {
+            int choice =
+                    JOptionPane.showOptionDialog(
+                            this,
+                            "‘"
+                                    + track.song().title()
+                                    + "’ 곡 정보가 저장되어 있습니다.\n재생하려면 이 곡의 사용 권한이 있는 MP3 파일을 연결해 주세요.",
+                            "곡 정보 · " + track.song().artists(),
+                            JOptionPane.DEFAULT_OPTION,
+                            JOptionPane.INFORMATION_MESSAGE,
+                            null,
+                            new String[] {"MP3 음원 연결", "멜론에서 곡 보기", "닫기"},
+                            "닫기");
+            if (choice == 0) attachAudio(track);
+            else if (choice == 1) {
+                try {
+                    Desktop.getDesktop()
+                            .browse(
+                                    java.net.URI.create(
+                                            "https://www.melon.com/song/detail.htm?songId="
+                                                    + (track.song().id() - 1_000_000_000L)));
+                } catch (Exception e) {
+                    Ui.info(this, "웹 브라우저에서 멜론 곡 정보를 열 수 없습니다.");
+                }
+            }
+            return;
+        }
         Ui.work(
                 this,
-                () -> new Lists(service.mine(), service.discover(q)),
-                data -> {
-                    mine = data.mine();
-                    publicLists = data.shared();
-                    ownModel.setRowCount(0);
-                    publicModel.setRowCount(0);
-                    for (Playlist p : mine)
-                        ownModel.addRow(
-                                new Object[] {
-                                    p.id(),
-                                    p.title(),
-                                    p.isPublic() ? "공개" : "비공개",
-                                    p.likes(),
-                                    p.createdAt().toLocalDate()
-                                });
-                    for (Playlist p : publicLists)
-                        publicModel.addRow(
-                                new Object[] {
-                                    p.id(),
-                                    p.title(),
-                                    p.nickname(),
-                                    p.likes(),
-                                    p.liked() ? "좋아요 누름" : "-"
-                                });
-                    status.setText(
-                            "내 목록 "
-                                    + mine.size()
-                                    + "개  |  공개 검색 결과 "
-                                    + publicLists.size()
-                                    + "개  |  목록을 선택하여 상세 화면에서 곡을 관리하세요.");
+                () -> library.authorize(track.song().id()),
+                authorized -> {
+                    selected = authorized.track();
+                    pass = authorized.pass();
+                    player.play(selected, pass);
+                    limitAnnounced = false;
+                    nowTitle.setText(selected.song().title());
+                    nowArtist.setText(selected.song().artists());
+                    nowArt.setIcon(new AlbumArt(track, 48));
+                    updatePassLabel();
                 });
     }
 
-    private Playlist selected(boolean own) {
-        JTable table = own ? ownTable : publicTable;
-        int row = table.getSelectedRow();
-        if (row < 0) throw new AppException("플레이리스트를 먼저 선택해 주세요.");
-        return (own ? mine : publicLists).get(table.convertRowIndexToModel(row));
+    private void attachAudio(MediaTrack track) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("선택한 곡의 보유 MP3 음원 연결");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("MP3 음원", "mp3"));
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+        java.nio.file.Path file = chooser.getSelectedFile().toPath();
+        Ui.work(
+                this,
+                () -> {
+                    new LocalAudioService().attach(track.song().id(), file);
+                    return true;
+                },
+                ok -> {
+                    refresh();
+                    Ui.info(this, "음원을 연결했습니다. 이 곡을 다시 선택하면 재생됩니다.");
+                });
     }
 
-    private void openSelected(boolean own) {
-        try {
-            new DetailDialog(this, service, selected(own).id(), this::refresh).setVisible(true);
-        } catch (AppException e) {
-            Ui.error(this, e);
-        }
+    private void updateChart() {
+        if (!requireConnection()) return;
+        Ui.work(
+                this,
+                () -> {
+                    MelonChartService service = new MelonChartService();
+                    var snapshot = service.fetch();
+                    service.save(snapshot);
+                    return snapshot;
+                },
+                snapshot -> {
+                    refresh();
+                    Ui.info(this, snapshot.chartAt() + " 기준 TOP100 100곡을 DB에 저장했습니다.");
+                });
     }
 
-    private void edit() {
-        try {
-            Playlist p = selected(true);
-            PlaylistEditor.open(
-                    this,
-                    p,
-                    v ->
-                            Ui.work(
-                                    this,
-                                    () -> {
-                                        service.edit(
-                                                p.id(), v.title(), v.description(), v.isPublic());
-                                        return true;
-                                    },
-                                    ok -> refresh()));
-        } catch (AppException e) {
-            Ui.error(this, e);
-        }
+    public void playSong(Song song) {
+        tracks.stream()
+                .filter(t -> t.song().id() == song.id())
+                .findFirst()
+                .ifPresentOrElse(
+                        this::play, () -> Ui.info(this, "이 곡에는 재생 가능한 실제 음원이 연결되어 있지 않습니다."));
     }
 
-    private void delete() {
-        try {
-            Playlist p = selected(true);
-            if (JOptionPane.showConfirmDialog(
-                            this,
-                            "‘" + p.title() + "’ 목록과 수록곡 연결, 좋아요 내역을 삭제할까요?",
-                            "삭제 확인",
-                            JOptionPane.YES_NO_OPTION)
-                    != JOptionPane.YES_OPTION) return;
-            Ui.work(
-                    this,
-                    () -> {
-                        service.delete(p.id());
-                        return true;
-                    },
-                    ok -> refresh());
-        } catch (AppException e) {
-            Ui.error(this, e);
-        }
+    private void skip(int direction) {
+        if (tracks.isEmpty()) return;
+        int index = selected == null ? 0 : tracks.indexOf(selected);
+        play(tracks.get(Math.floorMod(index + direction, tracks.size())));
     }
 
-    private void like() {
-        try {
-            Playlist p = selected(false);
-            Ui.work(
-                    this,
-                    () -> {
-                        service.like(p.id(), !p.liked());
-                        return true;
-                    },
-                    ok -> refresh());
-        } catch (AppException e) {
-            Ui.error(this, e);
+    private void tick() {
+        playButton.setIcon(
+                new MuseIcon(
+                        player.playing() && !player.paused() ? "pause" : "play", 24, Ui.ACCENT));
+        MediaTrack current = player.track();
+        if (current != null) {
+            if (!progress.getValueIsAdjusting()) {
+                updatingSlider = true;
+                progress.setMaximum(player.limit());
+                progress.setValue((int) player.position());
+                updatingSlider = false;
+            }
+            time.setText(format(player.position()) + " / " + current.song().duration());
         }
+        if (player.limited() && !limitAnnounced) {
+            limitAnnounced = true;
+            playMode.setText("1분 미리듣기가 끝났어요 · Plus로 전체 듣기");
+        }
+        if (player.error() != null) playMode.setText(player.error());
+    }
+
+    private String format(double seconds) {
+        int s = (int) seconds;
+        return (s / 60) + ":" + String.format("%02d", s % 60);
+    }
+
+    private void updatePassLabel() {
+        playMode.setText(pass.active() ? "Plus · 전체 듣기" : "무료 · 곡당 1분 미리듣기");
+        planButton.setText(pass.active() ? "Plus 이용 중" : "Plus 이용권");
+    }
+
+    private void openMembership() {
+        if (!requireConnection()) return;
+        new MembershipDialog(
+                        this,
+                        membership,
+                        () -> {
+                            player.stop();
+                            refresh();
+                        })
+                .setVisible(true);
+    }
+
+    private void create() {
+        if (!requireConnection()) return;
+        PlaylistEditor.open(
+                this,
+                null,
+                v ->
+                        Ui.work(
+                                this,
+                                () -> playlists.create(v.title(), v.description(), v.isPublic()),
+                                id -> {
+                                    page = "내 플레이리스트";
+                                    refresh();
+                                }));
+    }
+
+    private void open(Playlist p) {
+        if (!requireConnection()) return;
+        new DetailDialog(this, playlists, p.id(), this::refresh, this::playSong).setVisible(true);
+    }
+
+    private void edit(Playlist p) {
+        if (!requireConnection()) return;
+        PlaylistEditor.open(
+                this,
+                p,
+                v ->
+                        Ui.work(
+                                this,
+                                () -> {
+                                    playlists.edit(
+                                            p.id(), v.title(), v.description(), v.isPublic());
+                                    return true;
+                                },
+                                ok -> refresh()));
+    }
+
+    private void delete(Playlist p) {
+        if (!requireConnection()) return;
+        if (JOptionPane.showConfirmDialog(
+                        this,
+                        "‘" + p.title() + "’ 플레이리스트를 삭제할까요? 곡 원본은 유지됩니다.",
+                        "플레이리스트 삭제",
+                        JOptionPane.YES_NO_OPTION)
+                != JOptionPane.YES_OPTION) return;
+        Ui.work(
+                this,
+                () -> {
+                    playlists.delete(p.id());
+                    return true;
+                },
+                ok -> refresh());
+    }
+
+    private void like(Playlist p) {
+        if (!requireConnection()) return;
+        Ui.work(
+                this,
+                () -> {
+                    playlists.like(p.id(), !p.liked());
+                    return true;
+                },
+                ok -> refresh());
+    }
+
+    private void addSelected() {
+        if (selected == null) {
+            Ui.info(this, "먼저 담을 곡을 선택해 주세요.");
+            return;
+        }
+        if (!requireConnection()) return;
+        if (mine.isEmpty()) {
+            Ui.info(this, "곡을 담을 플레이리스트를 먼저 만들어 주세요.");
+            create();
+            return;
+        }
+        String[] names =
+                mine.stream().map(p -> p.title() + "  (#" + p.id() + ")").toArray(String[]::new);
+        String chosen =
+                (String)
+                        JOptionPane.showInputDialog(
+                                this,
+                                "곡을 담을 플레이리스트를 선택하세요.",
+                                "플레이리스트에 담기",
+                                JOptionPane.PLAIN_MESSAGE,
+                                null,
+                                names,
+                                names[0]);
+        if (chosen == null) return;
+        int index = Arrays.asList(names).indexOf(chosen);
+        long playlist = mine.get(index).id(), song = selected.song().id();
+        Ui.work(
+                this,
+                () -> {
+                    playlists.add(playlist, song);
+                    return true;
+                },
+                ok -> {
+                    Ui.info(this, "플레이리스트에 곡을 담았습니다.");
+                    refresh();
+                });
     }
 }

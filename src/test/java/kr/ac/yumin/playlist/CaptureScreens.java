@@ -1,5 +1,6 @@
 package kr.ac.yumin.playlist;
 
+import kr.ac.yumin.playlist.audio.AudioPlayer;
 import kr.ac.yumin.playlist.config.Database;
 import kr.ac.yumin.playlist.dao.Jdbc;
 import kr.ac.yumin.playlist.model.*;
@@ -8,15 +9,16 @@ import kr.ac.yumin.playlist.ui.*;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.*;
 import java.sql.*;
-import java.util.List;
 import java.util.concurrent.*;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-/** 실제 실행 중인 Swing 창을 캡처한다. UI 데이터는 실제 Oracle 서비스를 통해서만 채운다. */
+/** 실제 Oracle 데이터로 실행하는 화면 캡처. 새 임시 계정의 데이터만 정리한다. */
 public final class CaptureScreens {
     private static <T> T edt(Callable<T> task) throws Exception {
         FutureTask<T> f = new FutureTask<>(task);
@@ -24,20 +26,45 @@ public final class CaptureScreens {
         return f.get();
     }
 
+    private static Object field(Object o, String name) throws Exception {
+        Field f = o.getClass().getDeclaredField(name);
+        f.setAccessible(true);
+        return f.get(o);
+    }
+
+    private static void invoke(Object o, String name, Class<?>[] types, Object... args)
+            throws Exception {
+        Method m = o.getClass().getDeclaredMethod(name, types);
+        m.setAccessible(true);
+        m.invoke(o, args);
+    }
+
     private static void settle(Window w) throws Exception {
-        for (int i = 0; i < 120; i++) {
-            Thread.sleep(150);
-            if (edt(
-                    () ->
-                            !Boolean.TRUE.equals(
-                                    ((RootPaneContainer) w)
-                                            .getRootPane()
-                                            .getClientProperty("busy")))) return;
+        for (int i = 0; i < 200; i++) {
+            Thread.sleep(100);
+            boolean busy =
+                    edt(
+                            () -> {
+                                if (Boolean.TRUE.equals(
+                                        ((RootPaneContainer) w)
+                                                .getRootPane()
+                                                .getClientProperty("busy"))) return true;
+                                return w instanceof MainFrame && (boolean) field(w, "loading");
+                            });
+            if (!busy) {
+                edt(
+                        () -> {
+                            w.validate();
+                            return null;
+                        });
+                return;
+            }
         }
         throw new IllegalStateException("화면 로딩 시간 초과");
     }
 
     private static void capture(Window w, String name) throws Exception {
+        settle(w);
         edt(
                 () -> {
                     JComponent content = (JComponent) ((RootPaneContainer) w).getContentPane();
@@ -55,192 +82,173 @@ public final class CaptureScreens {
                 });
     }
 
-    private static List<Component> all(Container c) {
-        var result = new java.util.ArrayList<Component>();
-        for (Component child : c.getComponents()) {
-            result.add(child);
-            if (child instanceof Container d) result.addAll(all(d));
-        }
-        return result;
-    }
-
-    private static void click(Container c, String text) throws Exception {
-        edt(
-                () -> {
-                    all(c).stream()
-                            .filter(x -> x instanceof JButton b && b.getText().equals(text))
-                            .map(x -> (JButton) x)
-                            .findFirst()
-                            .orElseThrow()
-                            .doClick();
-                    return null;
-                });
-    }
-
     public static void main(String[] args) throws Exception {
         Files.createDirectories(Path.of("docs/screenshots"));
-        AuthFrame login =
-                edt(
-                        () -> {
-                            Ui.theme();
-                            AuthFrame f = new AuthFrame();
-                            f.setVisible(true);
-                            return f;
-                        });
-        capture(login, "01_login");
-        SwingUtilities.invokeLater(
-                () ->
-                        all(login).stream()
-                                .filter(
-                                        x ->
-                                                x instanceof JButton b
-                                                        && b.getText().equals("새 계정 만들기"))
-                                .map(x -> (JButton) x)
-                                .findFirst()
-                                .orElseThrow()
-                                .doClick());
-        Thread.sleep(400);
-        Window signup =
-                edt(
-                        () ->
-                                java.util.Arrays.stream(Window.getWindows())
-                                        .filter(w -> w instanceof JDialog && w.isVisible())
-                                        .findFirst()
-                                        .orElseThrow());
-        capture(signup, "02_signup");
-        edt(
-                () -> {
-                    signup.dispose();
-                    login.dispose();
-                    return null;
-                });
-        if (args.length > 0 && args[0].equals("login-only")) {
-            System.exit(0);
-            return;
-        }
-        AuthService auth = new AuthService();
-        String user = "report_" + Long.toUnsignedString(System.nanoTime(), 36);
+        Path temporary = Files.createTempDirectory(Path.of("target"), "capture-");
+        Member member = new LocalProfileService().resolve(temporary.resolve("profile.properties"));
+        PlaylistService service = new PlaylistService(member);
+        MembershipService membership = new MembershipService(member);
+        MusicLibraryService music = new MusicLibraryService(member);
+        MainFrame main = null;
         long id = 0;
+        var chart = music.catalog();
+        long first = chart.get(0).song().id(),
+                second = chart.get(1).song().id(),
+                third = chart.get(2).song().id();
         try {
-            char[] password = java.util.UUID.randomUUID().toString().toCharArray();
-            char[] confirmation = password.clone(), loginPassword = password.clone();
-            auth.register(user, password, confirmation, "김유민", "report@example.com");
-            Member member = auth.login(user, loginPassword);
-            PlaylistService service = new PlaylistService(member);
-            id = service.create("산책길의 작은 음악 모음", "조용히 걷는 시간에 어울리는 곡을 모았습니다.", false);
-            service.add(id, 101);
-            service.add(id, 103);
-            service.add(id, 102);
-            MainFrame main =
+            main =
                     edt(
                             () -> {
+                                Ui.theme();
                                 MainFrame f = new MainFrame(member);
                                 f.setVisible(true);
                                 return f;
                             });
-            settle(main);
-            capture(main, "03_my_playlists");
+            MainFrame f = main;
+            settle(f);
+            if (edt(() -> field(f, "library")) == null)
+                throw new IllegalStateException("실제 Oracle 보관함 연결 실패");
+            edt(
+                    () -> {
+                        ((AudioPlayer) field(f, "player")).volume(0);
+                        return null;
+                    });
+            Thread.sleep(3000);
+            capture(f, "13_home_live");
+            edt(
+                    () -> {
+                        invoke(f, "navigate", new Class<?>[] {String.class}, "전체 곡");
+                        return null;
+                    });
+            capture(f, "14_library_live");
+            id = service.create("오늘의 TOP100", "멜론 차트에서 발견한 나만의 음악.", true);
+            service.add(id, first);
+            service.add(id, second);
+            service.add(id, third);
+            service.like(id, true);
+            edt(
+                    () -> {
+                        invoke(f, "navigate", new Class<?>[] {String.class}, "내 플레이리스트");
+                        f.refresh();
+                        return null;
+                    });
+            capture(f, "15_my_playlist_live");
             long playlist = id;
             DetailDialog detail =
                     edt(
                             () -> {
                                 DetailDialog d =
-                                        new DetailDialog(main, service, playlist, main::refresh);
+                                        new DetailDialog(
+                                                f, service, playlist, f::refresh, f::playSong);
                                 d.setModalityType(Dialog.ModalityType.MODELESS);
                                 d.setVisible(true);
                                 return d;
                             });
-            settle(detail);
-            edt(
-                    () -> {
-                        all(detail).stream()
-                                .filter(x -> x instanceof JTextField)
-                                .map(x -> (JTextField) x)
-                                .findFirst()
-                                .orElseThrow()
-                                .setText("네온");
-                        return null;
-                    });
-            click(detail, "곡 검색");
-            settle(detail);
-            capture(detail, "04_song_search");
-            service.move(id, 102, -1);
+            capture(detail, "16_playlist_live");
+            service.move(id, third, -1);
             edt(
                     () -> {
                         detail.reload();
                         return null;
                     });
-            settle(detail);
-            capture(detail, "05_reordered");
-            service.edit(id, "산책길의 작은 음악 모음", "공개한 목록은 다른 회원도 조회하고 좋아요를 누를 수 있습니다.", true);
-            service.like(id, true);
+            capture(detail, "17_reorder_live");
             edt(
                     () -> {
                         detail.dispose();
-                        main.refresh();
                         return null;
                     });
-            settle(main);
-            edt(
-                    () -> {
-                        all(main).stream()
-                                .filter(x -> x instanceof JTabbedPane)
-                                .map(x -> (JTabbedPane) x)
-                                .findFirst()
-                                .orElseThrow()
-                                .setSelectedIndex(1);
-                        return null;
-                    });
-            capture(main, "06_public_likes");
-            DetailDialog shared =
+            MembershipDialog free =
                     edt(
                             () -> {
-                                DetailDialog d =
-                                        new DetailDialog(main, service, 1001, main::refresh);
+                                MembershipDialog d =
+                                        new MembershipDialog(f, membership, f::refresh);
                                 d.setModalityType(Dialog.ModalityType.MODELESS);
                                 d.setVisible(true);
                                 return d;
                             });
-            settle(shared);
-            capture(shared, "07_other_public");
+            capture(free, "18_free_pass_live");
             edt(
                     () -> {
-                        shared.dispose();
+                        free.dispose();
                         return null;
                     });
-            service.remove(id, 101);
+            membership.purchase(java.util.UUID.randomUUID().toString());
+            MembershipDialog paid =
+                    edt(
+                            () -> {
+                                MembershipDialog d =
+                                        new MembershipDialog(f, membership, f::refresh);
+                                d.setModalityType(Dialog.ModalityType.MODELESS);
+                                d.setVisible(true);
+                                return d;
+                            });
+            capture(paid, "19_paid_pass_live");
+            edt(
+                    () -> {
+                        paid.dispose();
+                        f.refresh();
+                        return null;
+                    });
+            settle(f);
+            edt(
+                    () -> {
+                        invoke(f, "navigate", new Class<?>[] {String.class}, "전체 곡");
+                        invoke(f, "select", new Class<?>[] {MediaTrack.class}, chart.get(0));
+                        return null;
+                    });
+            capture(f, "20_chart_selection_live");
+            membership.cancelLatest();
+            MembershipDialog cancelled =
+                    edt(
+                            () -> {
+                                MembershipDialog d =
+                                        new MembershipDialog(f, membership, f::refresh);
+                                d.setModalityType(Dialog.ModalityType.MODELESS);
+                                d.setVisible(true);
+                                return d;
+                            });
+            capture(cancelled, "21_cancelled_pass_live");
+            edt(
+                    () -> {
+                        cancelled.dispose();
+                        return null;
+                    });
+            service.remove(id, second);
             service.delete(id);
             id = 0;
             edt(
                     () -> {
-                        all(main).stream()
-                                .filter(x -> x instanceof JTabbedPane)
-                                .map(x -> (JTabbedPane) x)
-                                .findFirst()
-                                .orElseThrow()
-                                .setSelectedIndex(0);
-                        main.refresh();
+                        invoke(f, "navigate", new Class<?>[] {String.class}, "내 플레이리스트");
+                        f.refresh();
                         return null;
                     });
-            settle(main);
-            capture(main, "08_deleted");
+            capture(f, "22_deleted_live");
             edt(
                     () -> {
-                        main.dispose();
+                        f.dispose();
                         return null;
                     });
+            System.out.println("실제 Oracle TOP100 화면 10개 캡처 완료 (음원 연결 전 차트 정보 표시)");
         } finally {
+            if (main != null) {
+                MainFrame f = main;
+                edt(
+                        () -> {
+                            f.dispose();
+                            return null;
+                        });
+            }
             try (Connection c = Database.open()) {
                 if (id != 0)
                     Jdbc.update(
                             c,
                             "DELETE FROM PLAYLIST WHERE playlist_id=? AND member_id=?",
                             id,
-                            user);
-                Jdbc.update(c, "DELETE FROM MEMBER WHERE member_id=?", user);
+                            member.id());
+                Jdbc.update(c, "DELETE FROM MEMBERSHIP_ORDER WHERE member_id=?", member.id());
+                Jdbc.update(c, "DELETE FROM MEMBER WHERE member_id=?", member.id());
             }
         }
-        System.out.println("Oracle 화면 캡처 완료. 임시 회원과 목록 정리 완료.");
         System.exit(0);
     }
 }

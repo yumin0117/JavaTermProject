@@ -11,6 +11,7 @@ import javax.swing.table.DefaultTableModel;
 
 public final class DetailDialog extends JDialog {
     private final PlaylistService service;
+    private final java.util.function.Consumer<Song> listen;
     private final long id;
     private final Runnable changed;
     private PlaylistDetail detail;
@@ -25,7 +26,17 @@ public final class DetailDialog extends JDialog {
     private final JTextField query = new JTextField(25);
 
     public DetailDialog(Window owner, PlaylistService service, long id, Runnable changed) {
+        this(owner, service, id, changed, song -> {});
+    }
+
+    public DetailDialog(
+            Window owner,
+            PlaylistService service,
+            long id,
+            Runnable changed,
+            java.util.function.Consumer<Song> listen) {
         super(owner, "플레이리스트 상세", ModalityType.APPLICATION_MODAL);
+        this.listen = listen;
         this.service = service;
         this.id = id;
         this.changed = changed;
@@ -40,10 +51,14 @@ public final class DetailDialog extends JDialog {
         heading.add(meta);
         heading.add(Box.createVerticalStrut(10));
         description.setEditable(false);
+        description.setFocusable(false);
         description.setLineWrap(true);
         description.setWrapStyleWord(true);
         heading.add(new JScrollPane(description));
-        root.add(heading, BorderLayout.NORTH);
+        JPanel header = new JPanel(new BorderLayout(22, 0));
+        header.add(new MusicArt(id, 115), BorderLayout.WEST);
+        header.add(heading, BorderLayout.CENTER);
+        root.add(header, BorderLayout.NORTH);
         JPanel contents = new JPanel(new BorderLayout(0, 8));
         contents.add(new JScrollPane(table), BorderLayout.CENTER);
         JPanel ownButtons =
@@ -67,7 +82,17 @@ public final class DetailDialog extends JDialog {
         contents.add(manage, BorderLayout.SOUTH);
         root.add(contents, BorderLayout.CENTER);
         root.add(
-                Ui.row(like, Ui.button("새로고침", this::reload), Ui.button("닫기", this::dispose)),
+                Ui.row(
+                        Ui.primary(
+                                "선택 곡 듣기",
+                                () -> {
+                                    int row = table.getSelectedRow();
+                                    if (row >= 0 && detail != null)
+                                        listen.accept(detail.songs().get(row));
+                                }),
+                        like,
+                        Ui.button("새로고침", this::reload),
+                        Ui.button("닫기", this::dispose)),
                 BorderLayout.SOUTH);
         manage.setVisible(false);
         like.setEnabled(false);
@@ -88,14 +113,11 @@ public final class DetailDialog extends JDialog {
                     meta.setText(
                             "작성자: "
                                     + p.nickname()
-                                    + " ("
-                                    + p.owner()
-                                    + ")    |    "
+                                    + "    |    "
                                     + (p.isPublic() ? "공개" : "비공개")
                                     + "    |    좋아요 "
                                     + p.likes()
-                                    + "개    |    "
-                                    + p.createdAt().toLocalDate());
+                                    + "개");
                     description.setText(Ui.safe(p.description()));
                     model.setRowCount(0);
                     for (Song s : data.songs())
@@ -113,6 +135,7 @@ public final class DetailDialog extends JDialog {
                     like.setEnabled(p.isPublic() || p.liked());
                     like.setText(p.liked() ? "좋아요 취소" : "좋아요");
                     revalidate();
+                    if (own && searchResults.isEmpty()) search();
                 });
     }
 
@@ -120,7 +143,7 @@ public final class DetailDialog extends JDialog {
         String q = query.getText();
         Ui.work(
                 this,
-                () -> service.search(q),
+                () -> service.searchPlayable(q),
                 data -> {
                     searchResults = data;
                     searchModel.setRowCount(0);

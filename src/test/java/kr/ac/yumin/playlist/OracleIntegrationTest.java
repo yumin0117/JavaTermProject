@@ -91,7 +91,7 @@ class OracleIntegrationTest {
                 Jdbc.update(
                         c,
                         "UPDATE PLAYLIST_SONG SET play_order=999999 WHERE playlist_id=? AND"
-                            + " song_id=103",
+                                + " song_id=103",
                         id);
                 assertThrows(
                         SQLException.class,
@@ -99,7 +99,7 @@ class OracleIntegrationTest {
                                 Jdbc.update(
                                         c,
                                         "UPDATE PLAYLIST_SONG SET play_order=999999 WHERE"
-                                            + " playlist_id=? AND song_id=101",
+                                                + " playlist_id=? AND song_id=101",
                                         id));
                 c.rollback();
             }

@@ -1,0 +1,22 @@
+{
+  "tool": "Oracle SQL Developer 26.2.0.186.2220",
+  "method": "Tools > Database Export wizard; DDL + INSERT, UTF-8; public copy excludes a temporary private payment row",
+  "file": "sql/07_final_sqldeveloper_export.sql",
+  "tableCount": 11,
+  "insertCounts": {
+    "ARTIST": 78,
+    "MELON_CHART": 1,
+    "MELON_CHART_ENTRY": 100,
+    "MEMBER": 3,
+    "PLAYLIST": 3,
+    "PLAYLIST_LIKE": 3,
+    "PLAYLIST_SONG": 6,
+    "SONG": 109,
+    "SONG_ARTIST": 118,
+    "SONG_MEDIA": 4
+  },
+  "memberFilter": "member_id IN ('user01','user02','user03')",
+  "omittedPrivatePaymentRows": 1,
+  "sha256": "2e7a823b47b7dba5c52e6094471ec1da1b95c7afaea33ab2688b47fe4f00216d",
+  "notes": "Native export public copy, including local schema/storage clauses. Unfiltered original remains in ignored tmp. For a new empty schema execute 01,02,06,08,09 instead."
+}

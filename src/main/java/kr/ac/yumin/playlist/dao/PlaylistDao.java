@@ -72,7 +72,7 @@ FROM PLAYLIST p JOIN MEMBER m ON m.member_id=p.member_id
         return !Jdbc.list(
                         c,
                         "SELECT playlist_id FROM PLAYLIST WHERE playlist_id=? AND member_id=? FOR"
-                            + " UPDATE WAIT 5",
+                                + " UPDATE WAIT 5",
                         r -> r.getLong(1),
                         id,
                         user)
@@ -83,7 +83,7 @@ FROM PLAYLIST p JOIN MEMBER m ON m.member_id=p.member_id
         return !Jdbc.list(
                         c,
                         "SELECT playlist_id FROM PLAYLIST WHERE playlist_id=? AND is_public='Y' FOR"
-                            + " UPDATE WAIT 5",
+                                + " UPDATE WAIT 5",
                         r -> r.getLong(1),
                         id)
                 .isEmpty();
@@ -95,7 +95,7 @@ FROM PLAYLIST p JOIN MEMBER m ON m.member_id=p.member_id
         Jdbc.update(
                 c,
                 "INSERT INTO PLAYLIST(playlist_id,title,description,is_public,member_id)"
-                    + " VALUES(?,?,?,?,?)",
+                        + " VALUES(?,?,?,?,?)",
                 id,
                 title,
                 description,
@@ -109,7 +109,7 @@ FROM PLAYLIST p JOIN MEMBER m ON m.member_id=p.member_id
         return Jdbc.update(
                 c,
                 "UPDATE PLAYLIST SET title=?,description=?,is_public=? WHERE playlist_id=? AND"
-                    + " member_id=?",
+                        + " member_id=?",
                 title,
                 desc,
                 pub ? "Y" : "N",

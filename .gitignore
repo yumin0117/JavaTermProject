@@ -6,3 +6,6 @@ config/test-users.properties
 *.log
 .tools/
 tmp/
+config/local-profile.properties
+config/local-profile.lock
+config/audio/

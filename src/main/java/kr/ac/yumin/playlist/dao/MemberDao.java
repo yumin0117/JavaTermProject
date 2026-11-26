@@ -12,7 +12,7 @@ public final class MemberDao {
         return Jdbc.list(
                         c,
                         "SELECT member_id,nickname,email,password_hash FROM MEMBER WHERE"
-                            + " member_id=?",
+                                + " member_id=?",
                         r ->
                                 new Credentials(
                                         new Member(r.getString(1), r.getString(2), r.getString(3)),

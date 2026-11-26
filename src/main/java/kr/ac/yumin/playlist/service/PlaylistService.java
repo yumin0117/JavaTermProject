@@ -71,6 +71,21 @@ public final class PlaylistService {
         }
     }
 
+    public List<Song> searchPlayable(String query) throws SQLException {
+        String q = AuthService.text(query, "검색어", 200, false).toLowerCase(Locale.ROOT);
+        try (Connection c = Database.open()) {
+            return new MediaDao()
+                    .catalog(c).stream()
+                            .map(MediaTrack::song)
+                            .filter(
+                                    song ->
+                                            (song.title() + " " + song.artists())
+                                                    .toLowerCase(Locale.ROOT)
+                                                    .contains(q))
+                            .toList();
+        }
+    }
+
     public PlaylistDetail detail(long id) throws SQLException {
         try (Connection c = Database.open()) {
             // 두 SELECT가 동일 시점의 공개 여부와 수록곡을 보도록 읽기 전용 트랜잭션 사용.

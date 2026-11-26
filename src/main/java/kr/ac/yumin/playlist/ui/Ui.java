@@ -14,15 +14,57 @@ import javax.swing.table.DefaultTableModel;
 public final class Ui {
     private Ui() {}
 
+    public static final Color INK = new Color(32, 33, 39),
+            MUTED = new Color(128, 129, 141),
+            ACCENT = new Color(226, 62, 88),
+            SOFT = new Color(246, 246, 249);
+
     public static void theme() {
-        UIManager.put("defaultFont", new Font("맑은 고딕", Font.PLAIN, 14));
-        for (Object key : UIManager.getDefaults().keySet().toArray())
-            if (key.toString().endsWith(".font"))
-                UIManager.put(key, new Font("맑은 고딕", Font.PLAIN, 14));
-        UIManager.put("Panel.background", Color.WHITE);
-        UIManager.put("Table.rowHeight", 32);
-        UIManager.put("Table.selectionBackground", new Color(222, 234, 255));
-        UIManager.put("Table.selectionForeground", new Color(20, 35, 55));
+        try (java.io.InputStream in = Ui.class.getResourceAsStream("/theme/muse.properties")) {
+            if (in == null) throw new java.io.IOException("테마 파일 누락");
+            UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatPropertiesLaf("Muse", in));
+        } catch (Exception e) {
+            throw new IllegalStateException("화면 테마를 불러올 수 없습니다.", e);
+        }
+    }
+
+    public static JLabel text(String text, int size, boolean bold) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("맑은 고딕", bold ? Font.BOLD : Font.PLAIN, size));
+        l.setForeground(INK);
+        return l;
+    }
+
+    public static JLabel muted(String text) {
+        JLabel l = text(text, 12, false);
+        l.setForeground(MUTED);
+        return l;
+    }
+
+    public static JButton primary(String text, Runnable action) {
+        JButton b = button(text, action);
+        b.putClientProperty("FlatLaf.styleClass", "primary");
+        return b;
+    }
+
+    public static JButton quiet(String text, Runnable action) {
+        JButton b = button(text, action);
+        b.putClientProperty("FlatLaf.styleClass", "quiet");
+        return b;
+    }
+
+    public static JPanel padded(int padding) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBorder(BorderFactory.createEmptyBorder(padding, padding, padding, padding));
+        return p;
+    }
+
+    public static JScrollPane scroll(Component content) {
+        JScrollPane s = new JScrollPane(content);
+        s.setBorder(BorderFactory.createEmptyBorder());
+        s.getVerticalScrollBar().setUnitIncrement(24);
+        s.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        return s;
     }
 
     public static JPanel column() {
@@ -33,6 +75,7 @@ public final class Ui {
 
     public static JPanel row(Component... components) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        p.setAlignmentX(Component.LEFT_ALIGNMENT);
         for (Component c : components) p.add(c);
         return p;
     }
@@ -61,7 +104,7 @@ public final class Ui {
 
     public static JTable table(DefaultTableModel model) {
         JTable t = new JTable(model);
-        t.setRowHeight(33);
+        t.setRowHeight(58);
         t.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         t.getTableHeader().setReorderingAllowed(false);
         t.setFillsViewportHeight(true);
@@ -82,7 +125,9 @@ public final class Ui {
                     switch (s.getErrorCode()) {
                         case 1 -> "이미 등록된 항목입니다. 새로고침 후 다시 확인해 주세요.";
                         case 1017 -> "Oracle 사용자 이름 또는 비밀번호를 확인해 주세요.";
-                        case 942, 2289 -> "DB 테이블 또는 시퀀스가 없습니다. README의 SQL 설정 순서를 확인해 주세요.";
+                        case 942, 2289 ->
+                                "DB 테이블 또는 시퀀스가 없습니다. sql/02_add_sequence.sql과"
+                                        + " sql/06_music_and_membership.sql을 실행해 주세요.";
                         case 54, 30006 -> "다른 작업이 목록을 변경 중입니다. 잠시 후 다시 시도해 주세요.";
                         case 2291 -> "연결할 회원 또는 곡이 없습니다. 새로고침해 주세요.";
                         default ->
@@ -96,7 +141,7 @@ public final class Ui {
                                                                 .startsWith("config/db.properties")
                                                 ? s.getMessage()
                                                 : "데이터베이스 작업을 완료하지 못했습니다. Oracle 실행 상태와 외부 설정을 확인해"
-                                                      + " 주세요. (오류 번호: "
+                                                        + " 주세요. (오류 번호: "
                                                         + s.getErrorCode()
                                                         + ")";
                     };

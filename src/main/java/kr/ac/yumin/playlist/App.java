@@ -11,7 +11,7 @@ public final class App {
         SwingUtilities.invokeLater(
                 () -> {
                     Ui.theme();
-                    new AuthFrame().setVisible(true);
+                    new MainFrame().setVisible(true);
                 });
     }
 }

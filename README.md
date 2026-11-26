@@ -1,112 +1,105 @@
-# 음악 플레이리스트 공유 시스템
+# muse · 음악 플레이리스트 공유 시스템
 
-Java 17 · Swing · Oracle Database 21c XE · JDBC · Maven
+Java 17 · Swing · Oracle JDBC · 실제 MP3 재생 · 무료 1분 / 모의 이용권
 
-현재 상태: Java 17 빌드·기본 테스트 통과, SQL Developer 내보내기 완료. 실제 JDBC CRUD 검증과 최종 보고서는 DB 비밀번호·학년 입력 대기 중이다. PDF는 검토 초안으로 저장했다.
+[공개 저장소](https://github.com/yumin0117/JavaTermProject)
 
-김유민 / 2601110285 / 인공지능소프트웨어과 / 데이터베이스실무 / 민경주 교수님
+![실제 Oracle 홈 화면](docs/screenshots/13_home_live.png)
 
-저장소: https://github.com/yumin0117/JavaTermProject
+## 실행
 
-## 1. 구현 범위와 구조
+이 PC에서는 `run.bat`을 실행하거나 IntelliJ IDEA 2025.3.3에서 `App.main()`을 실행한다.
+**로그인 창 없이 바로 홈이 열린다.** 홈의 연결 상태에 차트 정보 100곡이 표시되면 DB 연결이 완료된 것이다.
 
-회원가입·로그인·로그아웃, 개인 플레이리스트 CRUD, 곡/아티스트 검색, 수록곡 추가·제거·위아래 순서 변경, 공개 목록 검색, 좋아요 등록·취소를 구현한 데스크톱 프로그램이다. 실제 음원 재생·외부 음악 API·관리자 화면은 범위에 포함하지 않는다.
+다른 PC에서는 다음 순서로 준비한다.
 
-```text
-JavaTermProject/
-  pom.xml
-  run.bat
-  config/db.properties.example
-  config/db.properties             # 실제 비밀번호, Git 제외
-  sql/01_original_schema_and_seed.sql
-  sql/02_add_sequence.sql
-  sql/03_original_queries.sql
-  sql/04_sqldeveloper_export.sql   # SQL Developer 실제 내보내기
-  src/main/java/kr/ac/yumin/playlist/
-    App.java
-    config/Database.java
-    security/PasswordHasher.java
-    model/{Member,Playlist,Song,PlaylistDetail}.java
-    dao/{Jdbc,MemberDao,PlaylistDao,SongDao}.java
-    service/{AppException,AuthService,PlaylistService}.java
-    ui/{Ui,AuthFrame,MainFrame,PlaylistEditor,DetailDialog}.java
-  src/test/java/kr/ac/yumin/playlist/
-    CoreTest.java
-    OracleIntegrationTest.java
-  docs/전체소스코드.md
-  docs/테스트순서.md
-  docs/screenshots/
-  docs/기말보고서_검토초안_2601110285_김유민.pdf
-```
-
-## 2. pom.xml 전체 내용
-
-[pom.xml](pom.xml)에서 전체 내용을 확인할 수 있다. Oracle JDBC 드라이버 ojdbc11 21.18.0.0을 포함한 실행 JAR를 Maven Shade로 만든다. Java 17 대상 컴파일을 명시한다.
-
-## 3. SQL 실행 순서
-
-### 현재 PC처럼 테이블과 예시 데이터가 이미 있는 경우
-
-1. SQL Developer에서 `c__dbsoft` 접속을 연다. 접속 이름과 달리 실제 사용자 이름은 `c##dbsoft`이다.
-2. Java 프로그램을 종료한 상태에서 `sql/02_add_sequence.sql`만 스크립트 실행(F5)한다.
-3. 이 스크립트는 테이블과 기존 데이터를 변경하지 않는다. 시퀀스가 없는 경우에만 현재 최대 번호 다음 값으로 생성한다. 기존 시퀀스는 유지한다.
-4. 프로그램은 생성 때마다 `SEQ_PLAYLIST.NEXTVAL`을 사용한다. 트랜잭션이 취소되어도 시퀀스 번호가 건너뛰는 것은 정상이다.
-
-### 완전히 비어 있는 별도의 실습 스키마를 준비하는 경우
-
-`sql/01_original_schema_and_seed.sql` → `COMMIT;` → `sql/02_add_sequence.sql` 순서로 실행한다. 원본 스크립트의 마지막 SELECT는 건수 조회용이다. 기존 DB에는 원본 생성/INSERT 파일을 재실행하지 않는다.
-
-`sql/04_sqldeveloper_export.sql`은 교수님 제출 요구에 따라 SQL Developer의 데이터베이스 익스포트로 만든 파일이다. 원본 그대로 보관한 파일이므로 환경 고정 스키마·저장영역과 DDL 종결자 설정이 포함된다. 다른 빈 스키마에 복원하려면 `sql/05_restore_portable.sql`을 사용한다. 이 보조 파일은 원본 CREATE 정의와 실제 내보낸 INSERT를 외래키 순서로 배치했다. 원본 생성 파일과 중복 실행하지 않는다. 기존 계정과 데이터에 대한 DROP·초기화 작업은 필요하지 않다.
-
-## 4. 외부 설정과 .gitignore
-
-`config/db.properties.example`을 같은 폴더의 `db.properties`로 복사한다.
+1. `pom.xml`을 IntelliJ Maven 프로젝트로 열고 Project SDK와 Maven Runner JRE를 Java 17로 설정한다.
+2. 완전히 빈 실습 스키마라면 `sql/01_original_schema_and_seed.sql`과 `COMMIT;`을 실행한다. 기존 테이블이 있다면 이 파일을 다시 실행하지 않는다.
+3. `sql/02_add_sequence.sql` → `sql/06_music_and_membership.sql` → `sql/08_melon_chart.sql` → `sql/09_melon_snapshot.sql` 순서로 SQL Developer에서 F5로 실행한다.
+4. 앱 상단 **연결 설정**에서 JDBC URL·Oracle 사용자 이름·비밀번호를 입력한다. 또는 `config/db.properties.example`을 `config/db.properties`로 복사하여 입력한다.
+5. `App.main()`을 실행한다. Working directory는 이 `JavaTermProject` 폴더로 설정한다.
 
 ```properties
 db.url=jdbc:oracle:thin:@localhost:1521:xe
 db.username=c##dbsoft
-db.password=여기에_실제_DB_비밀번호
+db.password=실제_Oracle_비밀번호
 ```
 
-설정 파일은 UTF-8이다. Java properties 문법이므로 비밀번호에 역슬래시가 있으면 `\\`로 작성한다. 설정 파일 경로는 프로젝트 실행 폴더 기준이며 필요하면 VM 옵션 `-Dplaylist.config=설정파일절대경로`로 지정할 수 있다. 실제 설정 파일은 `.gitignore`에서 제외하며 소스·로그·보고서에 비밀번호를 출력하지 않는다.
-
-## 5. Java 파일 전체 코드
-
-[전체 소스 코드 문서](docs/전체소스코드.md)에 pom.xml, 추가 SQL, 설정 예시, .gitignore, 모든 Java 파일의 전체 코드가 파일 경로와 함께 수록되어 있다. 실제 구현 파일은 `src/main/java`에 있다.
-
-## 6. IntelliJ IDEA 2025.3.3 실행
-
-1. IntelliJ의 Open에서 이 폴더의 `pom.xml`을 선택하고 Maven 프로젝트로 연다.
-2. File → Project Structure → Project SDK를 Java 17로 설정한다. 이 PC에 설치한 경로는 `C:\Users\AISW-510-106\.jdks\jdk-17.0.18+8`이다.
-3. Settings → Build, Execution, Deployment → Build Tools → Maven → Runner의 JRE도 Project SDK(17)로 설정한다. Maven은 IntelliJ에 포함된 버전을 쓸 수 있다.
-4. Maven 창에서 Reload All Maven Projects를 눌러 의존성을 받는다.
-5. 위 SQL과 외부 설정을 확인한다.
-6. `kr.ac.yumin.playlist.App.main()` 옆 초록색 실행 버튼을 누른다. Run Configuration의 Working directory는 이 `JavaTermProject` 폴더로 지정한다.
-7. 처음에는 프로그램에서 회원가입한다. `user01`~`user03`의 `DEMO_HASH_NOT_FOR_AUTH_*`는 진짜 해시가 아니므로 로그인할 수 없다.
-
-Maven Lifecycle → `package`를 실행하면 `target/JavaTermProject-1.0.0.jar`가 생성된다. Java 17 이상에서 프로젝트 폴더를 기준으로 `java -jar target/JavaTermProject-1.0.0.jar`로 실행할 수 있다. Windows에서는 JAVA_HOME 또는 PATH에 Java를 설정한 후 `run.bat`을 실행한다.
-
-## 7. 테스트와 구현 설명
-
-[사용자 테스트 순서](docs/테스트순서.md)에 회원가입부터 삭제까지 예상 결과가 있다.
+SQL Developer 접속 이름 `c__dbsoft`와 실제 사용자명 `c##dbsoft`는 서로 다르다.
+설정 파일은 UTF-8 Java properties 형식이며 실제 비밀번호 파일은 Git에 포함하지 않는다.
+이 PC의 Java 17은 `%USERPROFILE%\.jdks\jdk-17.0.18+8`에 있다. Maven의 `package`를 실행하면 MP3와 드라이버가 포함된 `target/JavaTermProject-1.0.0.jar`가 생성된다.
 
 ```shell
-mvn clean package          # 비밀번호/입력 검증 테스트 + 실행 JAR 생성
-mvn -Poracle-test test     # 실제 Oracle 연동 테스트 (외부 설정 필요)
+mvn clean package
+mvn -Poracle-test test
+java -jar target/JavaTermProject-1.0.0.jar
 ```
 
-일반 테스트는 DB 없이 실행한다. Oracle 테스트는 임의 이름의 회원과 목록을 새로 생성하고, 자신이 생성한 데이터만 정리한다. 실행 전후 원본 행 전체를 비교해 보존 여부를 확인한다. 실패할 경우 DB 연결 문제와 테스트 실패를 구분하여 Maven 결과를 확인한다.
+## 구현 기능
 
-구조: Swing 화면 → 서비스(검증·권한·트랜잭션) → DAO(PreparedStatement) → Oracle. 서비스는 로그인 회원별로 생성한다. 비공개 조회 SQL과 쓰기 SQL에도 소유자/공개 조건이 포함되어 있다. 이 데스크톱 프로그램은 신뢰된 실습 DB 계정을 사용하는 구조로, DB 계정 자체를 공유받은 사람이 직접 실행하는 SQL의 접근까지 통제하는 서버 시스템은 아니다.
+- 홈·전체 곡·내 플레이리스트·공개 플레이리스트·좋아요한 목록
+- 멜론 TOP100 제목/가수/앨범 검색과 TOP 10·TOP 50·음원 연결됨 필터
+- 플레이리스트 생성·조회·제목/설명/공개 수정·삭제
+- 실제 곡 담기·제거·위/아래 순서 교환, 공개 목록 좋아요·취소
+- 실제 MP3 재생·일시정지·구간 이동·이전/다음·볼륨
+- 무료 이용: 곡당 처음 60초까지 재생/이동, 끝나면 이용권 안내
+- Plus 30일 이용권: 전체 재생, DB 결제 이력, 최근 결제 취소
 
-회원별 16바이트 salt와 PBKDF2WithHmacSHA256 600,000회 반복 결과를 저장한다. 평문 비밀번호는 저장하지 않는다. 좋아요 중복은 복합 PK와 부모 행 잠금으로 방지하며 자기 공개 목록 좋아요도 허용한다.
+**결제는 과제용 모의 결제이며 실제 돈은 청구하지 않는다.** 표시 가격은 4,900원이지만 실제 청구액은 0원이다. 카드번호나 결제 API 키를 받지 않는다. 유효한 이용권이 없으면 실제 오디오 출력 프레임을 60초로 제한한다.
 
-곡 순서 변경은 같은 Connection의 트랜잭션에서 PLAYLIST 부모 행을 `FOR UPDATE WAIT 5`로 잠근다. 사용하지 않는 양수 임시 번호를 찾아 3회 UPDATE로 교환한다. 0과 음수를 쓰지 않으며 실패 시 전체 롤백한다. 제거 후에는 남은 곡을 기존 순서의 오름차순으로 1부터 압축한다. NUMBER(6)의 범위를 넘는 번호는 사용하지 않는다. 같은 목록의 모든 앱 쓰기 작업이 같은 잠금 규칙을 따른다.
+## DB를 기준으로 동작하는 부분
 
-DB 조회와 PBKDF2 계산은 SwingWorker에서 실행하고, 화면은 EDT에서 갱신한다. 작업 중 중복 실행을 막고 연결 실패를 한글로 안내한다.
+곡 목록은 최신 `MELON_CHART_ENTRY JOIN SONG LEFT JOIN SONG_MEDIA`, 소유 목록과 공개 목록은 `PLAYLIST`, 좋아요는 `PLAYLIST_LIKE`, 결제 상태는 `MEMBERSHIP_ORDER`에서 읽는다. 재생 시에도 서비스가 DB의 현재 시각과 유효기간을 조회한다. 결제 시 회원 행 잠금과 요청 UUID로 중복을 방지하고, 취소 시 기록을 남긴다. 로컬 파일에 결제 성공 여부나 플레이리스트 데이터를 대신 저장하지 않는다.
 
-## 제출
+사용자가 요청한 대로 초기 로그인/회원가입 화면을 제거했다. 대신 `LocalProfileService`가 이 PC 전용 회원을 생성하고 PBKDF2 인증 후 사용한다. 기존 DEMO_HASH 계정을 로그인 우회에 사용하지 않는다. 개인 계정 식별자와 임의 인증 키는 `config/local-profile.properties`에만 보관하고 Git에서 제외한다. 이 파일을 없애면 새 보관함 계정이 만들어지므로 기존 개인 목록에 계속 접근하려면 보관한다. 비공개 접근·소유권 검사는 서비스와 SQL에서 유지된다.
 
-공개 저장소 이름은 `JavaTermProject`이다. 제출 PDF와 SQL 내보내기 파일을 저장소에 포함하고 제출 커밋 메시지는 `★ 기말과제제출 ★`를 사용한다. 마감은 2026년 12월 10일(목) 자정 전이다. 실제 LMS 제출이 별도로 필요한지는 수업 공지를 확인한다.
+기존 7개 테이블과 예시 30건은 유지한다. 앱의 기본 곡 목록은 **2026.11.26 11:00 KST 멜론 TOP100 100곡**이다. [멜론 공식 차트](https://www.melon.com/chart/index.htm)의 순위·곡명·가수·앨범·곡 번호·커버 URL만 수집하여 Oracle에 저장했다. `docs/data/melon-top100-20261126.json`과 `sql/09_melon_snapshot.sql`로 같은 목록을 재현한다. 앱 상단 **차트 갱신**을 누르면 공개 차트를 다시 수집한다. 1~100위 연속 순위, 중복 곡 번호, 필수 필드, 전체 100곡을 검증한 뒤 하나의 트랜잭션으로 저장한다. 실패하면 이전 DB 목록을 유지한다.
 
-참고: [Oracle JDBC 호환성](https://www.oracle.com/database/technologies/faq-jdbc.html), [Apache Maven](https://maven.apache.org/).
+곡 ID는 `1,000,000,000 + 멜론 곡 번호`, 가수 ID는 `2,000,000,000 + 멜론 가수 번호`로 매핑한다. 순위가 바뀌어도 기존 플레이리스트 연결은 유지한다. `MELON_CHART`는 차트 시점, `MELON_CHART_ENTRY`는 해당 시점의 순위를 보존한다. 원문에 없는 재생 길이는 임의로 만들지 않고 NULL로 저장한다. 이를 위해 추가 SQL 08에서 `SONG.duration_seconds`의 NOT NULL을 완화하고 양수 CHECK는 유지했다. 원문에 없는 장르·발매일도 NULL이며 가수 국가는 ‘미확인’이다.
+
+## 스타일과 음원 재생
+
+Swing은 웹 CSS를 직접 적용하지 않으므로 FlatLaf의 선언식 스타일 파일 `src/main/resources/theme/muse.properties`를 적용했다. 색상·글꼴·버튼·표·입력란을 이 파일에서 수정한다. 차트 커버는 멜론이 제공한 URL에서 비동기로 표시하고, 연결 실패 시 앱 자체 그래픽을 쓴다.
+
+**멜론 차트 정보 수집은 상업 음원 다운로드나 스트리밍 권한을 제공하지 않는다.** 100곡은 우선 ‘정보’ 상태로 표시한다. 곡을 더블클릭하면 멜론 곡 페이지를 열거나 해당 곡의 사용 권한이 있는 MP3를 연결할 수 있다. 연결한 파일은 `config/audio/`에 보관하고 공개 Git에서 제외한다. 곡·파일 연결과 확인한 길이는 DB에 저장하며, 연결 후 무료 60초/모의 Plus 전체 길이 재생이 적용된다. 모의 이용권에는 멜론 스트리밍 권한이 포함되지 않는다.
+
+오디오 엔진 검증용으로 CC0 쇼팽 녹음 4개를 별도 유지했다. 기본 TOP100에는 포함하지 않는다. [음원 출처](docs/음원출처.md)와 `docs/audio-sources.json`에 원본·라이선스·해시가 기록되어 있다. 상업 곡 제목에 다른 녹음을 연결해 재생되는 것처럼 표시하지 않는다.
+
+## 폴더 구조
+
+```text
+config/               외부 접속 정보 예시, 실제 설정·개인 인증 정보는 Git 제외
+src/main/java/kr/ac/yumin/playlist/
+  App.java            로그인 없이 메인 앱 실행
+  config/             Oracle 설정과 연결
+  model/              회원·곡·플레이리스트·음원·결제·이용권
+  dao/                PreparedStatement와 조회/변경 SQL
+  service/            권한·트랜잭션·모의 결제·재생 권한
+  audio/              실제 MP3 디코딩/출력, 60초 제한 정책
+  ui/                 메인·상세·목록 편집·연결·이용권 화면
+src/main/resources/
+  theme/muse.properties
+  audio/              CC0 실제 MP3 4개
+src/test/java/        기본·실제 Oracle·오디오 검증 및 화면 캡처 도구
+sql/                  원본 SQL, 실제 SQL Developer 내보내기, 추가 마이그레이션
+docs/                 최종 PDF, 전체 소스, ER SVG, 캡처, 테스트 기록
+tools/                DB 초기 추가 SQL 실행과 문서 재생성
+```
+
+## 제출 자료
+
+- [보고서 PDF](docs/기말보고서_2601110285_김유민.pdf): 표지는 직접 작성하도록 항목 위치만 마련했다.
+- `sql/04_sqldeveloper_export.sql`: 최초 7개 테이블/30건의 SQL Developer 내보내기 원본
+- `sql/06_music_and_membership.sql`: 실제 곡/음원, 모의 결제 테이블 추가 SQL
+- `sql/07_final_sqldeveloper_export.sql`: 최종 11개 테이블의 SQL Developer 내보내기
+- `sql/08_melon_chart.sql`: 차트 스냅샷 테이블과 미확인 길이 NULL 허용
+- `sql/09_melon_snapshot.sql`: 수집한 실제 TOP100 100곡 재현용 SQL
+- [파일별 전체 코드](docs/전체소스코드.md), [테스트 순서](docs/테스트순서.md), [검증 결과](docs/검증결과.md)
+
+SQL Developer 내보내기 07은 실제 마법사에서 생성한 파일의 공유본이다. 개인 보관함 회원은 예시 3명만 내보내도록 필터링했고, 캡처 도중 생성된 임시 개인 결제 INSERT 1줄은 공유본에서 제외했다. 로컬 스키마명·저장영역 설정과 DDL 구분자 형식이 포함되므로 다른 PC의 빈 스키마에는 원본 생성 SQL + 02 + 06 + 08 + 09 순서로 실행한다. 기존 DB에서 생성/복원 SQL을 중복 실행하지 않는다. 생성 방식과 검증한 행 수·해시는 `docs/sql-export-metadata.json`에 기록했다.
+
+## 검증
+
+Java 17 빌드와 테스트 12개가 실제 Oracle에서 통과했다. 기본 사운드 장치를 음량 0으로 열어 무료 60초 정지, 유료 61초 이후 재생, 일시정지·재개도 확인했다. 주요 화면 10개는 실제 DB에 새로 만든 임시 계정으로 캡처한 뒤 해당 임시 데이터만 정리했다. `ui.DesignCapture`는 디자인 QA 도구이며 운영 앱은 그 픽스처 데이터를 사용하지 않는다.
+
+시퀀스 번호와 신규 개인 계정은 정상적으로 증가한다. 시퀀스의 번호 공백은 롤백 시에도 발생할 수 있으며 오류가 아니다. 저장소의 DB 비밀번호·개인 인증 정보 제외 여부를 검증했다.
