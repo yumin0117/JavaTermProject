@@ -293,33 +293,12 @@ public final class CaptureScreens {
                         album.dispose();
                         return null;
                     });
-            JDialog more =
-                    edt(
-                            () -> {
-                                var constructor =
-                                        Class.forName("kr.ac.yumin.playlist.ui.CatalogImportDialog")
-                                                .getDeclaredConstructor(
-                                                        Window.class, Runnable.class);
-                                constructor.setAccessible(true);
-                                JDialog dialog =
-                                        (JDialog) constructor.newInstance(f, (Runnable) f::refresh);
-                                dialog.setModalityType(Dialog.ModalityType.MODELESS);
-                                dialog.setVisible(true);
-                                return dialog;
-                            });
-            capture(more, "27_catalog_import_live");
-            edt(
-                    () -> {
-                        more.dispose();
-                        return null;
-                    });
-
             edt(
                     () -> {
                         f.dispose();
                         return null;
                     });
-            System.out.println("실제 Oracle 음악 보관함·앨범·별 즐겨찾기 화면 15개 캡처 완료");
+            System.out.println("실제 Oracle 음악 보관함·앨범·별 즐겨찾기 화면 14개 캡처 완료");
         } finally {
             if (main != null) {
                 MainFrame f = main;

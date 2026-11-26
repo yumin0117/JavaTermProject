@@ -110,8 +110,7 @@ public final class MainFrame extends JFrame {
             {"전체 곡", "music"},
             {"즐겨찾기 곡", "star"},
             {"내 플레이리스트", "library"},
-            {"공개 플레이리스트", "search"},
-            {"좋아요한 목록", "heart"}
+            {"공개 플레이리스트", "search"}
         };
         for (String[] item : items) {
             JButton b = Ui.button(item[0], () -> navigate(item[0]));
@@ -162,17 +161,7 @@ public final class MainFrame extends JFrame {
                         BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(239, 239, 243)),
                         BorderFactory.createEmptyBorder(17, 30, 16, 30)));
         header.add(sectionTitle, BorderLayout.WEST);
-        JPanel tools =
-                Ui.row(
-                        search,
-                        Ui.quiet(
-                                "곡 더 불러오기",
-                                () -> {
-                                    if (requireConnection())
-                                        new CatalogImportDialog(this, this::refresh)
-                                                .setVisible(true);
-                                }),
-                        Ui.quiet("연결 설정", () -> ConnectionDialog.open(this, this::refresh)));
+        JPanel tools = Ui.row(search);
         tools.setBorder(BorderFactory.createEmptyBorder());
         header.add(tools, BorderLayout.EAST);
         return header;
@@ -305,8 +294,7 @@ public final class MainFrame extends JFrame {
                     pass = d.pass();
                     favoriteIds = d.favorites();
                     player.updatePass(pass);
-                    connection.setText(
-                            "연결됨 · 보관함 " + tracks.size() + "곡 · 나의 플레이리스트 " + mine.size() + "개");
+                    connection.setText("");
                 } catch (Exception e) {
                     library = null;
                     playlists = null;
@@ -316,7 +304,7 @@ public final class MainFrame extends JFrame {
                     shared = List.of();
                     pass = PassStatus.free();
                     player.stop();
-                    connection.setText("음악 보관함 연결이 필요합니다. 연결 설정에서 Oracle 접속 정보를 확인해 주세요.");
+                    connection.setText("음악 보관함을 불러오지 못했습니다. 잠시 후 다시 실행해 주세요.");
                 }
                 render();
             }
@@ -350,12 +338,14 @@ public final class MainFrame extends JFrame {
         content.removeAll();
         JPanel body = Ui.column();
         body.setBorder(BorderFactory.createEmptyBorder(24, 32, 26, 32));
-        JPanel banner = new JPanel(new BorderLayout());
-        banner.setAlignmentX(Component.LEFT_ALIGNMENT);
-        banner.add(connection, BorderLayout.CENTER);
-        banner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
-        body.add(banner);
-        body.add(Box.createVerticalStrut(17));
+        if (!connection.getText().isBlank()) {
+            JPanel banner = new JPanel(new BorderLayout());
+            banner.setAlignmentX(Component.LEFT_ALIGNMENT);
+            banner.add(connection, BorderLayout.CENTER);
+            banner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            body.add(banner);
+            body.add(Box.createVerticalStrut(17));
+        }
         if (page.equals("홈")) renderHome(body);
         else if (page.equals("전체 곡") || page.equals("즐겨찾기 곡")) renderSongs(body);
         else renderPlaylists(body);
@@ -415,13 +405,7 @@ public final class MainFrame extends JFrame {
         title.setForeground(Color.WHITE);
         heroText.add(title);
         heroText.add(Box.createVerticalStrut(10));
-        JLabel subtitle =
-                Ui.text(
-                        tracks.isEmpty()
-                                ? "나만의 음악 보관함을 채워보세요."
-                                : "보관함의 " + tracks.size() + "곡에서 나만의 취향을 발견하세요.",
-                        12,
-                        false);
+        JLabel subtitle = Ui.text("나만의 취향을 발견하세요.", 12, false);
         subtitle.setForeground(new Color(221, 229, 222));
         heroText.add(subtitle);
         heroText.add(Box.createVerticalStrut(12));
@@ -546,7 +530,7 @@ public final class MainFrame extends JFrame {
                     empty(
                             tracks.isEmpty() ? "연결된 음악이 없습니다" : "검색 결과가 없습니다",
                             tracks.isEmpty()
-                                    ? "상단 연결 설정에서 보관함을 연결해 주세요."
+                                    ? "음악 보관함을 불러온 뒤 다시 확인해 주세요."
                                     : "다른 제목이나 가수 이름으로 검색해 보세요."));
     }
 
@@ -656,9 +640,7 @@ public final class MainFrame extends JFrame {
         List<Playlist> rows =
                 page.equals("내 플레이리스트")
                         ? mine
-                        : shared.stream()
-                                .filter(p -> !page.equals("좋아요한 목록") || p.liked())
-                                .toList();
+                        : shared;
         if (rows.isEmpty()) {
             append(
                     body,
@@ -719,7 +701,7 @@ public final class MainFrame extends JFrame {
 
     private boolean requireConnection() {
         if (playlists == null || library == null || membership == null) {
-            ConnectionDialog.open(this, this::refresh);
+            Ui.info(this, "음악 보관함을 불러오지 못했습니다. 잠시 후 다시 실행해 주세요.");
             return false;
         }
         return true;

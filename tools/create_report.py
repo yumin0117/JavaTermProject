@@ -96,7 +96,7 @@ p('소유자만 목록을 변경할 수 있고 다른 회원의 비공개 목록
 p('DB 접속 정보·개인 인증 정보·사용자 연결 음원은 공개 Git에 포함하지 않는다. 결제 성공 여부와 플레이리스트는 로컬 JSON이 아니라 Oracle에서 조회한다.','small')
 
 page();heading(5,'로그인 없이 열리는 음악 홈');image('13_home_live.png',370)
-p('실제 Oracle에 연결한 홈 화면이다. 보관함 곡 수와 실제 제목·가수·커버를 표시한다. 커버를 누르면 앨범 상세가 열린다. 왼쪽에서 곡과 개인/공개/좋아요 목록으로 이동하며 하단 플레이어는 화면을 바꾸어도 유지된다.')
+p('실제 Oracle에 연결한 홈 화면이다. 실제 곡 제목·가수·앨범 커버를 표시한다. 커버를 누르면 앨범 상세가 열린다. 왼쪽에서 곡과 개인/공개/좋아요 목록으로 이동하며 하단 플레이어는 화면을 바꾸어도 유지된다.')
 p('색상·글꼴·버튼·표·입력란은 theme/muse.properties에서 관리한다. 차트 커버는 원문 URL에서 비동기로 가져오며 실패하면 앱의 자체 그래픽을 표시한다. 화면의 TOP100 문구를 제거하고 추가 수집곡까지 보관함에 표시한다.','small')
 
 page();heading(6,'실제 곡 검색과 목록 담기');image('14_library_live.png',290);image('16_playlist_live.png',260)
@@ -116,14 +116,14 @@ page();heading(10,'앨범 커버로 보는 발매·크레딧');image('25_album_i
 p('하단 플레이어의 NEON 커버를 클릭하여 실제로 열린 창이다. 앨범 제목·아티스트·발매일·유형·장르·발매사·기획사와 선택한 곡의 작사·작곡·편곡을 표시한다. 곡마다 크레딧이 다르므로 앨범 정보와 선택 곡 크레딧을 구분한다.')
 p('정보는 원본 곡/앨범 페이지에서 필요한 사실만 추출하여 DB에 저장한다. 다음 열기에는 DB 캐시를 사용하고 정보 새로고침으로 갱신할 수 있다. 원문에 없는 값은 임의 생성하지 않고 “제공된 정보 없음”으로 표시한다. 가사와 상업 음원은 수집하지 않았다.','small')
 
-page();heading(11,'별 즐겨찾기와 곡 더 불러오기');image('23_favorite_library_live.png',270);image('27_catalog_import_live.png',240)
+page();heading(11,'별 즐겨찾기 저장과 해제');image('23_favorite_library_live.png',270);image('26_album_unfavorite_live.png',240)
 p('하단 플레이어·곡 목록·앨범 창의 별을 누르면 SONG_FAVORITE에 저장하고 다시 누르면 해제한다. 왼쪽 즐겨찾기 곡에서 모아 볼 수 있으며 프로그램을 다시 켜도 DB의 별 상태를 읽는다. 다른 회원의 즐겨찾기에는 영향을 주지 않는다.','small')
-p('곡 더 불러오기에서는 최신곡 50개 목록 또는 멜론 곡 상세 URL/번호로 곡 정보를 추가한다. 같은 곡을 다시 가져오면 기존 ID로 갱신한다. 추가된 곡은 MUSIC_CATALOG에 남으므로 차트 변경 후에도 플레이리스트와 별 연결이 유지된다. 음원 파일은 별도 연결이 필요하다.','small')
+p('상단은 별표한 곡을 모아 보는 화면이고, 하단은 앨범 창에서 즐겨찾기를 해제한 모습이다. 홈의 곡 수 문구와 좋아요한 목록 메뉴, 곡 가져오기 및 연결 설정 버튼을 제거하여 음악 탐색과 개인 보관함에 집중하도록 정리했다.','small')
 
 page();heading(12,'검증 결과와 실행 방법')
 table([['검증','결과'],['Java 17 Maven package','실행 JAR 생성 성공, 실제 Oracle 포함 17 tests / failures 0 / errors 0'],['CoreTest 3개','해시·salt·DEMO 인증 거부·입력 검증'],['PlaybackTest 4개','무료·유료·만료/취소 정책, CC0 MP3 4개 실제 디코딩'],['OracleIntegrationTest 1개','CRUD·접근 제어·좋아요·순서·동시 변경·롤백·원본 보존'],['MusicOracleTest 1개','자동 보관함 재사용, 보관함 조회, 중복 결제·취소·재구매'],['MelonChartTest 2개','실제 수집 스냅샷 파싱, 부분 차트·중복 순위 거부'],['LocalAudioOracleTest 1개','실제 MP3 연결·길이 확인·음원 없는 곡 재생 거부'],['AlbumFactsTest 2개','실제 발매일·다중 작사/작곡·필수 정보·최신곡 파싱'],['FavoriteOracleTest 3개','별 저장/해제·회원 분리·중복 방지, 상세 갱신 롤백, 재수집 중복 방지']],[155,W-155])
 p('IntelliJ 실행','sub')
-p('① pom.xml을 Maven 프로젝트로 열고 SDK를 Java 17로 설정한다.<br/>② 빈 스키마에서만 원본 SQL 01을 실행한다. 기존 DB에서는 재실행하지 않는다.<br/>③ 추가 SQL 02 → 06 → 08 → 09 → 10 → 11를 SQL Developer에서 F5로 실행한다.<br/>④ 접속 설정 후 App.main()을 실행한다. 빌드 후에는 run.bat으로 실행할 수 있다.<br/>⑤ 상단 곡 더 불러오기로 최신곡 또는 곡 번호를 추가할 수 있다.')
+p('① pom.xml을 Maven 프로젝트로 열고 SDK를 Java 17로 설정한다.<br/>② 빈 스키마에서만 원본 SQL 01을 실행한다. 기존 DB에서는 재실행하지 않는다.<br/>③ 추가 SQL 02 → 06 → 08 → 09 → 10 → 11를 SQL Developer에서 F5로 실행한다.<br/>④ 접속 설정 후 App.main()을 실행한다. 빌드 후에는 run.bat으로 실행할 수 있다.')
 p('제출 자료와 출처','sub')
 p('공개 저장소: https://github.com/yumin0117/JavaTermProject<br/>보고서 PDF·E-R SVG·주요 화면·Java 소스·SQL Developer 최종 DDL 내보내기 12·음악 정보 재현 SQL 11를 포함한다. 표지는 직접 작성하도록 항목 위치만 마련했다. 제출 커밋명은 “★ 기말과제제출 ★”이다.','small')
 p('차트: https://www.melon.com/chart/index.htm (2026.11.26 11:00 KST)<br/>파서: https://jsoup.org / 테마: https://www.formdev.com/flatlaf/<br/>오디오 검증: https://archive.org/details/musopen-chopin (CC0 1.0)','small')
