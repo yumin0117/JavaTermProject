@@ -121,7 +121,7 @@ public final class CaptureScreens {
                         return null;
                     });
             capture(f, "14_library_live");
-            id = service.create("오늘의 TOP100", "멜론 차트에서 발견한 나만의 음악.", true);
+            id = service.create("오늘의 음악", "일상에서 발견한 나만의 음악.", true);
             service.add(id, first);
             service.add(id, second);
             service.add(id, third);
@@ -223,12 +223,103 @@ public final class CaptureScreens {
                         return null;
                     });
             capture(f, "22_deleted_live");
+            MediaTrack neon =
+                    music.catalog().stream()
+                            .filter(t -> t.song().id() == 1603382333L)
+                            .findFirst()
+                            .orElseThrow();
+            FavoriteService favorites = new FavoriteService(member);
+            edt(
+                    () -> {
+                        invoke(f, "select", new Class<?>[] {MediaTrack.class}, neon);
+                        ((JButton) field(f, "favoriteButton")).doClick();
+                        return null;
+                    });
+            settle(f);
+            if (!favorites.ids().contains(neon.song().id()))
+                throw new IllegalStateException("하단 별 버튼 DB 저장 실패");
+            edt(
+                    () -> {
+                        invoke(f, "navigate", new Class<?>[] {String.class}, "즐겨찾기 곡");
+                        f.refresh();
+                        return null;
+                    });
+            capture(f, "23_favorite_library_live");
+            edt(
+                    () -> {
+                        invoke(f, "navigate", new Class<?>[] {String.class}, "전체 곡");
+                        invoke(f, "select", new Class<?>[] {MediaTrack.class}, neon);
+                        return null;
+                    });
+            capture(f, "24_player_favorite_live");
+            AlbumDialog album =
+                    edt(
+                            () -> {
+                                JLabel art = (JLabel) field(f, "nowArt");
+                                art.dispatchEvent(
+                                        new java.awt.event.MouseEvent(
+                                                art,
+                                                java.awt.event.MouseEvent.MOUSE_CLICKED,
+                                                System.currentTimeMillis(),
+                                                0,
+                                                10,
+                                                10,
+                                                1,
+                                                false));
+                                return (AlbumDialog)
+                                        java.util.Arrays.stream(Window.getWindows())
+                                                .filter(
+                                                        w ->
+                                                                w instanceof AlbumDialog
+                                                                        && w.isDisplayable())
+                                                .findFirst()
+                                                .orElseThrow(
+                                                        () ->
+                                                                new IllegalStateException(
+                                                                        "하단 커버 클릭으로 앨범 창이 열리지"
+                                                                            + " 않았습니다."));
+                            });
+            capture(album, "25_album_info_live");
+            edt(
+                    () -> {
+                        invoke(album, "toggleFavorite", new Class<?>[] {});
+                        return null;
+                    });
+            capture(album, "26_album_unfavorite_live");
+            if (favorites.ids().contains(neon.song().id()))
+                throw new IllegalStateException("즐겨찾기 취소 DB 확인 실패");
+            edt(
+                    () -> {
+                        album.dispose();
+                        return null;
+                    });
+            JDialog more =
+                    edt(
+                            () -> {
+                                var constructor =
+                                        Class.forName("kr.ac.yumin.playlist.ui.CatalogImportDialog")
+                                                .getDeclaredConstructor(
+                                                        Window.class, Runnable.class);
+                                constructor.setAccessible(true);
+                                JDialog dialog =
+                                        (JDialog) constructor.newInstance(f, (Runnable) f::refresh);
+                                dialog.setModalityType(Dialog.ModalityType.MODELESS);
+                                dialog.setVisible(true);
+                                return dialog;
+                            });
+            capture(more, "27_catalog_import_live");
+            edt(
+                    () -> {
+                        more.dispose();
+                        return null;
+                    });
+
             edt(
                     () -> {
                         f.dispose();
                         return null;
                     });
-            System.out.println("실제 Oracle TOP100 화면 10개 캡처 완료 (음원 연결 전 차트 정보 표시)");
+            System.out.println("실제 Oracle 음악 보관함·앨범·별 즐겨찾기 화면 15개 캡처 완료");
         } finally {
             if (main != null) {
                 MainFrame f = main;
@@ -245,6 +336,7 @@ public final class CaptureScreens {
                             "DELETE FROM PLAYLIST WHERE playlist_id=? AND member_id=?",
                             id,
                             member.id());
+                Jdbc.update(c, "DELETE FROM SONG_FAVORITE WHERE member_id=?", member.id());
                 Jdbc.update(c, "DELETE FROM MEMBERSHIP_ORDER WHERE member_id=?", member.id());
                 Jdbc.update(c, "DELETE FROM MEMBER WHERE member_id=?", member.id());
             }

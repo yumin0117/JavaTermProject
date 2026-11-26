@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="495.27559055118115" height="407.8740157480315" preserveAspectRatio="xMinYMin meet" viewBox="0 0 495 407" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="495.27559055118115" height="407.8740157480315"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-407)" style="clip-path: url(#clip)">
+		<g transform=" matrix(0.971129,0,0,0.971129,0,0)">
+			<polyline points="70 270, 70 365, 200 365" style="stroke: rgb(64%,62%,68%); stroke-linecap: butt; stroke-width: 1; fill: None; fill-rule: evenodd;"/>
+			<text x="100" y="372" style="font-family: Korean; font-size: 8px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,744) scale(1,-1)">1 : 0..1</text>
+			<polyline points="130 245, 200 245" style="stroke: rgb(64%,62%,68%); stroke-linecap: butt; stroke-width: 1; fill: None; fill-rule: evenodd;"/>
+			<text x="143" y="252" style="font-family: Korean; font-size: 8px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,504) scale(1,-1)">1 : 0..1</text>
+			<polyline points="320 245, 380 245" style="stroke: rgb(64%,62%,68%); stroke-linecap: butt; stroke-width: 1; fill: None; fill-rule: evenodd;"/>
+			<text x="339" y="252" style="font-family: Korean; font-size: 8px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,504) scale(1,-1)">N : 1</text>
+			<polyline points="70 220, 70 130" style="stroke: rgb(64%,62%,68%); stroke-linecap: butt; stroke-width: 1; fill: None; fill-rule: evenodd;"/>
+			<text x="77" y="172" style="font-family: Korean; font-size: 8px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,344) scale(1,-1)">1 : N</text>
+			<polyline points="70 220, 70 165, 260 165, 260 130" style="stroke: rgb(64%,62%,68%); stroke-linecap: butt; stroke-width: 1; fill: None; fill-rule: evenodd;"/>
+			<text x="179" y="173" style="font-family: Korean; font-size: 8px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,346) scale(1,-1)">1 : N</text>
+			<polyline points="320 105, 380 105" style="stroke: rgb(64%,62%,68%); stroke-linecap: butt; stroke-width: 1; fill: None; fill-rule: evenodd;"/>
+			<text x="339" y="112" style="font-family: Korean; font-size: 8px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,224) scale(1,-1)">N : 1</text>
+			<rect x="10" y="220" width="120" height="50" rx="6" ry="6" style="stroke: rgb(73%,71%,77%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="16" y="251" style="font-family: KoreanBold; font-size: 8px;fill: rgb(12%,12%,15%); stroke:none;" transform="translate(0,502) scale(1,-1)">SONG</text>
+			<text x="16" y="233" style="font-family: Korean; font-size: 5.9px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,466) scale(1,-1)">existing PK song_id</text>
+			<rect x="200" y="340" width="120" height="50" rx="6" ry="6" style="stroke: rgb(73%,71%,77%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(96%,95%,96%); fill-rule: evenodd;"/>
+			<text x="206" y="371" style="font-family: KoreanBold; font-size: 8px;fill: rgb(12%,12%,15%); stroke:none;" transform="translate(0,742) scale(1,-1)">MUSIC_CATALOG</text>
+			<text x="206" y="353" style="font-family: Korean; font-size: 5.9px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,706) scale(1,-1)">PK, FK song_id</text>
+			<rect x="200" y="220" width="120" height="50" rx="6" ry="6" style="stroke: rgb(73%,71%,77%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(96%,95%,96%); fill-rule: evenodd;"/>
+			<text x="206" y="251" style="font-family: KoreanBold; font-size: 8px;fill: rgb(12%,12%,15%); stroke:none;" transform="translate(0,502) scale(1,-1)">SONG_DETAIL</text>
+			<text x="206" y="233" style="font-family: Korean; font-size: 5.9px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,466) scale(1,-1)">PK, FK song_id / FK album_id</text>
+			<rect x="380" y="220" width="120" height="50" rx="6" ry="6" style="stroke: rgb(73%,71%,77%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(96%,95%,96%); fill-rule: evenodd;"/>
+			<text x="386" y="251" style="font-family: KoreanBold; font-size: 8px;fill: rgb(12%,12%,15%); stroke:none;" transform="translate(0,502) scale(1,-1)">ALBUM_INFO</text>
+			<text x="386" y="233" style="font-family: Korean; font-size: 5.9px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,466) scale(1,-1)">PK album_id</text>
+			<rect x="10" y="80" width="120" height="50" rx="6" ry="6" style="stroke: rgb(73%,71%,77%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(96%,95%,96%); fill-rule: evenodd;"/>
+			<text x="16" y="111" style="font-family: KoreanBold; font-size: 8px;fill: rgb(12%,12%,15%); stroke:none;" transform="translate(0,222) scale(1,-1)">SONG_CREDIT</text>
+			<text x="16" y="93" style="font-family: Korean; font-size: 5.9px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,186) scale(1,-1)">PK song_id / role / order</text>
+			<rect x="200" y="80" width="120" height="50" rx="6" ry="6" style="stroke: rgb(73%,71%,77%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(96%,95%,96%); fill-rule: evenodd;"/>
+			<text x="206" y="111" style="font-family: KoreanBold; font-size: 8px;fill: rgb(12%,12%,15%); stroke:none;" transform="translate(0,222) scale(1,-1)">SONG_FAVORITE</text>
+			<text x="206" y="93" style="font-family: Korean; font-size: 5.9px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,186) scale(1,-1)">PK, FK member_id / song_id</text>
+			<rect x="380" y="80" width="120" height="50" rx="6" ry="6" style="stroke: rgb(73%,71%,77%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="386" y="111" style="font-family: KoreanBold; font-size: 8px;fill: rgb(12%,12%,15%); stroke:none;" transform="translate(0,222) scale(1,-1)">MEMBER</text>
+			<text x="386" y="93" style="font-family: Korean; font-size: 5.9px;fill: rgb(45%,45%,50%); stroke:none;" transform="translate(0,186) scale(1,-1)">existing PK member_id</text>
+		</g>
+	</g>
+</svg>

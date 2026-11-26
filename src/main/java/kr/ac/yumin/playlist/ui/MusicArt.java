@@ -83,8 +83,7 @@ public final class MusicArt extends JComponent implements Icon {
         if (width > 95 && height > 95) {
             g.setColor(Color.WHITE);
             g.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            g.drawString(
-                    new String[] {"MUSE", "MUSIC", "PLAYLIST", "LIBRARY"}[variant], 18, 173);
+            g.drawString(new String[] {"MUSE", "MUSIC", "PLAYLIST", "LIBRARY"}[variant], 18, 173);
             g.setFont(new Font("Segoe UI", Font.PLAIN, 8));
             g.drawString("YOUR MUSIC COLLECTION", 18, 187);
         }

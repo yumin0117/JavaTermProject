@@ -26,7 +26,7 @@ class LocalAudioOracleTest {
                 Jdbc.update(
                         c,
                         "INSERT INTO SONG(song_id,title,album_title) VALUES(?,'강아지 왈츠 음원 연결"
-                            + " 검증','CC0 검증')",
+                                + " 검증','CC0 검증')",
                         id);
             }
             Path source = directory.resolve("waltz.mp3");

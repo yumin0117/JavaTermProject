@@ -76,6 +76,17 @@ public final class MuseIcon implements Icon {
                 p.lineTo(14, 21);
                 g.draw(p);
             }
+            case "star" -> {
+                Path2D p = new Path2D.Double();
+                for (int i = 0; i < 10; i++) {
+                    double a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 == 0 ? 10 : 4.5;
+                    double px = 12 + Math.cos(a) * r, py = 12 + Math.sin(a) * r;
+                    if (i == 0) p.moveTo(px, py);
+                    else p.lineTo(px, py);
+                }
+                p.closePath();
+                g.draw(p);
+            }
             case "heart" -> {
                 Path2D p = new Path2D.Float();
                 p.moveTo(12, 21);

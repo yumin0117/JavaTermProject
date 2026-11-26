@@ -39,6 +39,8 @@ public final class MainFrame extends JFrame {
     private String page = "홈", filter = "전체";
     private boolean loading, updatingSlider, limitAnnounced;
     private MediaTrack selected;
+    private Set<Long> favoriteIds = Set.of();
+    private final JButton favoriteButton = Ui.quiet("☆", () -> toggleFavorite(footerTrack()));
 
     public MainFrame() {
         this(null);
@@ -106,6 +108,7 @@ public final class MainFrame extends JFrame {
         String[][] items = {
             {"홈", "home"},
             {"전체 곡", "music"},
+            {"즐겨찾기 곡", "star"},
             {"내 플레이리스트", "library"},
             {"공개 플레이리스트", "search"},
             {"좋아요한 목록", "heart"}
@@ -162,7 +165,13 @@ public final class MainFrame extends JFrame {
         JPanel tools =
                 Ui.row(
                         search,
-                        Ui.quiet("차트 갱신", this::updateChart),
+                        Ui.quiet(
+                                "곡 더 불러오기",
+                                () -> {
+                                    if (requireConnection())
+                                        new CatalogImportDialog(this, this::refresh)
+                                                .setVisible(true);
+                                }),
                         Ui.quiet("연결 설정", () -> ConnectionDialog.open(this, this::refresh)));
         tools.setBorder(BorderFactory.createEmptyBorder());
         header.add(tools, BorderLayout.EAST);
@@ -177,7 +186,19 @@ public final class MainFrame extends JFrame {
                         BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(234, 234, 240)),
                         BorderFactory.createEmptyBorder(15, 24, 14, 24)));
         JPanel left = new JPanel(new BorderLayout(12, 0));
-        left.setPreferredSize(new Dimension(275, 58));
+        left.setPreferredSize(new Dimension(300, 58));
+        nowArt.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        nowArt.setToolTipText("앨범 정보 보기");
+        nowArt.addMouseListener(
+                new MouseAdapter() {
+                    public void mouseClicked(MouseEvent e) {
+                        openAlbum(footerTrack());
+                    }
+                });
+        favoriteButton.setFont(favoriteButton.getFont().deriveFont(25f));
+        favoriteButton.setToolTipText("즐겨찾기 저장 / 해제");
+        favoriteButton.setEnabled(false);
+        left.add(favoriteButton, BorderLayout.EAST);
         left.add(nowArt, BorderLayout.WEST);
         JPanel names = Ui.column();
         names.add(Box.createVerticalStrut(7));
@@ -265,7 +286,8 @@ public final class MainFrame extends JFrame {
                         ms.catalog(),
                         ps.mine(),
                         publicLists,
-                        membershipService.status());
+                        membershipService.status(),
+                        new FavoriteService(resolved).ids());
             }
 
             protected void done() {
@@ -281,9 +303,10 @@ public final class MainFrame extends JFrame {
                     mine = d.mine();
                     shared = d.shared();
                     pass = d.pass();
+                    favoriteIds = d.favorites();
                     player.updatePass(pass);
                     connection.setText(
-                            "연결됨 · 차트 정보 " + tracks.size() + "곡 · 나의 플레이리스트 " + mine.size() + "개");
+                            "연결됨 · 보관함 " + tracks.size() + "곡 · 나의 플레이리스트 " + mine.size() + "개");
                 } catch (Exception e) {
                     library = null;
                     playlists = null;
@@ -308,7 +331,8 @@ public final class MainFrame extends JFrame {
             List<MediaTrack> tracks,
             List<Playlist> mine,
             List<Playlist> shared,
-            PassStatus pass) {}
+            PassStatus pass,
+            Set<Long> favorites) {}
 
     private void render() {
         for (var entry : navigation.entrySet()) {
@@ -333,12 +357,13 @@ public final class MainFrame extends JFrame {
         body.add(banner);
         body.add(Box.createVerticalStrut(17));
         if (page.equals("홈")) renderHome(body);
-        else if (page.equals("전체 곡")) renderSongs(body);
+        else if (page.equals("전체 곡") || page.equals("즐겨찾기 곡")) renderSongs(body);
         else renderPlaylists(body);
         content.add(Ui.scroll(body), BorderLayout.CENTER);
         content.revalidate();
         content.repaint();
         updatePassLabel();
+        updateFavoriteButton();
     }
 
     private void append(JPanel body, JComponent component) {
@@ -382,19 +407,19 @@ public final class MainFrame extends JFrame {
         hero.setMaximumSize(new Dimension(Integer.MAX_VALUE, 166));
         JPanel heroText = Ui.column();
         heroText.setOpaque(false);
-        JLabel eyebrow = Ui.text("MELON TOP100 · DATABASE LIBRARY", 10, true);
+        JLabel eyebrow = Ui.text("MUSE · YOUR MUSIC LIBRARY", 10, true);
         eyebrow.setForeground(new Color(205, 221, 209));
         heroText.add(eyebrow);
         heroText.add(Box.createVerticalStrut(9));
-        JLabel title = Ui.text("지금 가장 많이 듣는 음악", 26, true);
+        JLabel title = Ui.text("좋아하는 음악을 한곳에", 26, true);
         title.setForeground(Color.WHITE);
         heroText.add(title);
         heroText.add(Box.createVerticalStrut(10));
         JLabel subtitle =
                 Ui.text(
                         tracks.isEmpty()
-                                ? "멜론 TOP100을 나만의 플레이리스트로."
-                                : tracks.get(0).chartAt() + " 기준 · Oracle에 저장된 TOP100",
+                                ? "나만의 음악 보관함을 채워보세요."
+                                : "보관함의 " + tracks.size() + "곡에서 나만의 취향을 발견하세요.",
                         12,
                         false);
         subtitle.setForeground(new Color(221, 229, 222));
@@ -411,9 +436,17 @@ public final class MainFrame extends JFrame {
                         tracks.isEmpty() ? new MusicArt(0, 120) : new AlbumArt(tracks.get(0), 120));
         disc.setBorder(BorderFactory.createEmptyBorder(0, 18, 0, 10));
         hero.add(disc, BorderLayout.EAST);
+        disc.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        disc.setToolTipText("앨범 정보 보기");
+        disc.addMouseListener(
+                new MouseAdapter() {
+                    public void mouseClicked(MouseEvent e) {
+                        if (!tracks.isEmpty()) openAlbum(tracks.get(0));
+                    }
+                });
         append(body, hero);
         body.add(Box.createVerticalStrut(24));
-        append(body, section("TOP 4 · 지금 인기 있는 곡", Ui.quiet("전체 보기  →", () -> navigate("전체 곡"))));
+        append(body, section("지금 만나볼 음악", Ui.quiet("전체 보기  →", () -> navigate("전체 곡"))));
         body.add(Box.createVerticalStrut(13));
         if (tracks.isEmpty()) append(body, empty("음악 보관함을 연결해 주세요", "연결하면 실제 곡과 앨범이 이곳에 표시됩니다."));
         else {
@@ -424,7 +457,7 @@ public final class MainFrame extends JFrame {
             append(body, cards);
         }
         body.add(Box.createVerticalStrut(23));
-        append(body, section("멜론 TOP100", Ui.quiet("선택한 곡 담기", () -> addSelected())));
+        append(body, section("나의 음악", Ui.quiet("선택한 곡 담기", () -> addSelected())));
         body.add(Box.createVerticalStrut(9));
         append(body, songTable(tracks));
     }
@@ -452,23 +485,23 @@ public final class MainFrame extends JFrame {
                 new MouseAdapter() {
                     public void mouseClicked(MouseEvent e) {
                         select(track);
-                        play(track);
+                        openAlbum(track);
                     }
                 };
         cover.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         cover.addMouseListener(click);
-        card.setToolTipText("곡 정보 / 재생 · " + track.song().title());
+        card.setToolTipText("앨범 정보 보기 · " + track.song().title());
         return card;
     }
 
     private void renderSongs(JPanel body) {
-        append(body, Ui.text("멜론 TOP100", 29, true));
+        append(body, Ui.text(page.equals("즐겨찾기 곡") ? "즐겨찾기 곡" : "음악 보관함", 29, true));
         body.add(Box.createVerticalStrut(9));
-        append(body, Ui.muted("멜론 차트에서 수집한 100곡 · 곡 정보 저장 / 보유 음원 연결"));
+        append(body, Ui.muted("앨범 커버로 자세히 살펴보고, 별표로 좋아하는 곡을 모아보세요."));
         body.add(Box.createVerticalStrut(22));
         JPanel pills = Ui.row();
         pills.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        for (String category : new String[] {"전체", "TOP 10", "TOP 50", "음원 연결됨"}) {
+        for (String category : new String[] {"전체", "즐겨찾기", "음원 연결됨"}) {
             JButton b =
                     Ui.button(
                             category,
@@ -484,11 +517,11 @@ public final class MainFrame extends JFrame {
         String q = search.getText().strip().toLowerCase(Locale.ROOT);
         shownTracks =
                 tracks.stream()
+                        .filter(t -> !page.equals("즐겨찾기 곡") || favoriteIds.contains(t.song().id()))
                         .filter(
                                 t ->
                                         switch (filter) {
-                                            case "TOP 10" -> t.rank() <= 10;
-                                            case "TOP 50" -> t.rank() <= 50;
+                                            case "즐겨찾기" -> favoriteIds.contains(t.song().id());
                                             case "음원 연결됨" -> t.playable();
                                             default -> true;
                                         })
@@ -518,16 +551,17 @@ public final class MainFrame extends JFrame {
     }
 
     private JComponent songTable(List<MediaTrack> rows) {
-        DefaultTableModel model = Ui.model("순위", "곡 / 가수", "앨범", "재생", "");
+        DefaultTableModel model = Ui.model("#", "곡 / 가수", "앨범", "재생", "담기", "별");
         for (int i = 0; i < rows.size(); i++) {
             Song s = rows.get(i).song();
             model.addRow(
                     new Object[] {
-                        rows.get(i).rank(),
+                        i + 1,
                         s.title(),
                         s.album(),
                         rows.get(i).playable() ? s.duration() : "정보",
-                        "+"
+                        "+",
+                        favoriteIds.contains(s.id()) ? "★" : "☆"
                     });
         }
         JTable table = Ui.table(model);
@@ -535,6 +569,19 @@ public final class MainFrame extends JFrame {
         table.getColumnModel().getColumn(0).setMaxWidth(42);
         table.getColumnModel().getColumn(3).setMaxWidth(67);
         table.getColumnModel().getColumn(4).setMaxWidth(42);
+        table.getColumnModel().getColumn(5).setMaxWidth(42);
+        table.getColumnModel()
+                .getColumn(5)
+                .setCellRenderer(
+                        (t, value, on, focus, row, column) -> {
+                            JLabel star = new JLabel(String.valueOf(value), SwingConstants.CENTER);
+                            star.setFont(star.getFont().deriveFont(21f));
+                            star.setForeground(
+                                    favoriteIds.contains(rows.get(row).song().id())
+                                            ? new Color(177, 119, 6)
+                                            : Ui.MUTED);
+                            return star;
+                        });
         table.getColumnModel().getColumn(1).setPreferredWidth(340);
         table.getColumnModel().getColumn(2).setPreferredWidth(240);
         table.getColumnModel()
@@ -568,8 +615,16 @@ public final class MainFrame extends JFrame {
                         int row = table.rowAtPoint(e.getPoint());
                         if (row < 0) return;
                         select(rows.get(row));
-                        if (table.columnAtPoint(e.getPoint()) == 4) addSelected();
-                        else if (e.getClickCount() == 2) play(rows.get(row));
+                        int column = table.columnAtPoint(e.getPoint());
+                        if (column == 5) {
+                            if (e.getClickCount() == 1) toggleFavorite(rows.get(row));
+                        } else if (column == 4) {
+                            if (e.getClickCount() == 1) addSelected();
+                        } else if (column == 2
+                                || (column == 1
+                                        && e.getX() - table.getCellRect(row, 1, true).x < 45)) {
+                            if (e.getClickCount() == 1) openAlbum(rows.get(row));
+                        } else if (e.getClickCount() == 2) play(rows.get(row));
                     }
                 });
         table.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "listen");
@@ -677,6 +732,7 @@ public final class MainFrame extends JFrame {
             nowArtist.setText(track.song().artists());
             nowArt.setIcon(new AlbumArt(track, 48));
             time.setText("0:00 / " + track.song().duration());
+            updateFavoriteButton();
         }
     }
 
@@ -721,6 +777,7 @@ public final class MainFrame extends JFrame {
                     nowArtist.setText(selected.song().artists());
                     nowArt.setIcon(new AlbumArt(track, 48));
                     updatePassLabel();
+                    updateFavoriteButton();
                 });
     }
 
@@ -742,20 +799,37 @@ public final class MainFrame extends JFrame {
                 });
     }
 
-    private void updateChart() {
+    private MediaTrack footerTrack() {
+        return player.playing() && player.track() != null ? player.track() : selected;
+    }
+
+    private void openAlbum(MediaTrack track) {
+        if (track == null) return;
         if (!requireConnection()) return;
+        new AlbumDialog(this, track, member, this::refresh, this::play).setVisible(true);
+    }
+
+    private void toggleFavorite(MediaTrack track) {
+        if (track == null || !requireConnection()) return;
+        boolean next = !favoriteIds.contains(track.song().id());
         Ui.work(
                 this,
                 () -> {
-                    MelonChartService service = new MelonChartService();
-                    var snapshot = service.fetch();
-                    service.save(snapshot);
-                    return snapshot;
+                    new FavoriteService(member).set(track.song().id(), next);
+                    return new FavoriteService(member).ids();
                 },
-                snapshot -> {
-                    refresh();
-                    Ui.info(this, snapshot.chartAt() + " 기준 TOP100 100곡을 DB에 저장했습니다.");
+                ids -> {
+                    favoriteIds = ids;
+                    render();
                 });
+    }
+
+    private void updateFavoriteButton() {
+        MediaTrack track = footerTrack();
+        favoriteButton.setEnabled(track != null && member != null);
+        boolean on = track != null && favoriteIds.contains(track.song().id());
+        favoriteButton.setText(on ? "★" : "☆");
+        favoriteButton.setForeground(on ? new Color(177, 119, 6) : Ui.MUTED);
     }
 
     public void playSong(Song song) {
@@ -768,7 +842,13 @@ public final class MainFrame extends JFrame {
 
     private void skip(int direction) {
         if (tracks.isEmpty()) return;
-        int index = selected == null ? 0 : tracks.indexOf(selected);
+        int index =
+                selected == null
+                        ? 0
+                        : java.util.stream.IntStream.range(0, tracks.size())
+                                .filter(i -> tracks.get(i).song().id() == selected.song().id())
+                                .findFirst()
+                                .orElse(0);
         play(tracks.get(Math.floorMod(index + direction, tracks.size())));
     }
 

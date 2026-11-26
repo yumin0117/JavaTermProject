@@ -115,9 +115,9 @@ public final class MelonChartService {
                     Jdbc.update(
                             c,
                             "MERGE INTO SONG d USING(SELECT ? id FROM DUAL) x ON(d.song_id=x.id)"
-                                + " WHEN MATCHED THEN UPDATE SET title=?,album_title=? WHEN NOT"
-                                + " MATCHED THEN INSERT(song_id,title,album_title)"
-                                + " VALUES(x.id,?,?)",
+                                    + " WHEN MATCHED THEN UPDATE SET title=?,album_title=? WHEN NOT"
+                                    + " MATCHED THEN INSERT(song_id,title,album_title)"
+                                    + " VALUES(x.id,?,?)",
                             e.songId(),
                             e.title(),
                             e.album(),
@@ -135,9 +135,9 @@ public final class MelonChartService {
                 Jdbc.update(
                         c,
                         "MERGE INTO MELON_CHART d USING(SELECT ? at FROM DUAL) x"
-                            + " ON(d.chart_at=x.at) WHEN MATCHED THEN UPDATE SET"
-                            + " fetched_at=SYSTIMESTAMP WHEN NOT MATCHED THEN"
-                            + " INSERT(chart_at,source_url,row_count) VALUES(x.at,?,100)",
+                                + " ON(d.chart_at=x.at) WHEN MATCHED THEN UPDATE SET"
+                                + " fetched_at=SYSTIMESTAMP WHEN NOT MATCHED THEN"
+                                + " INSERT(chart_at,source_url,row_count) VALUES(x.at,?,100)",
                         at,
                         SOURCE);
                 for (Entry e : snapshot.entries())

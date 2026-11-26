@@ -19,12 +19,12 @@ s.album_title,s.genre,s.duration_seconds,m.resource_path,m.performer,m.source_ur
                 c,
                 COLUMNS
                         + """
-                          ,e.chart_rank,e.cover_url,TO_CHAR(e.chart_at,'YYYY.MM.DD HH24:MI')
-                          FROM MELON_CHART_ENTRY e JOIN SONG s ON s.song_id=e.song_id
-                          LEFT JOIN SONG_MEDIA m ON m.song_id=s.song_id
-                          WHERE e.chart_at=(SELECT MAX(chart_at) FROM MELON_CHART)
-                          ORDER BY e.chart_rank
-                          """,
+,NVL(e.chart_rank,0),cat.cover_url,TO_CHAR(cat.added_at,'YYYY.MM.DD HH24:MI')
+FROM MUSIC_CATALOG cat JOIN SONG s ON s.song_id=cat.song_id
+LEFT JOIN MELON_CHART_ENTRY e ON e.song_id=s.song_id AND e.chart_at=(SELECT MAX(chart_at) FROM MELON_CHART)
+LEFT JOIN SONG_MEDIA m ON m.song_id=s.song_id
+ORDER BY NVL(e.chart_rank,1000000),cat.added_at,s.song_id
+""",
                 r ->
                         new MediaTrack(
                                 song(r),
@@ -41,15 +41,19 @@ s.album_title,s.genre,s.duration_seconds,m.resource_path,m.performer,m.source_ur
         return Jdbc.list(
                         c,
                         COLUMNS
-                                + " FROM SONG s LEFT JOIN SONG_MEDIA m ON m.song_id=s.song_id WHERE"
-                                + " s.song_id=?",
+                                + ",0,cat.cover_url,NULL FROM SONG s LEFT JOIN SONG_MEDIA m ON"
+                                + " m.song_id=s.song_id LEFT JOIN MUSIC_CATALOG cat ON"
+                                + " cat.song_id=s.song_id WHERE s.song_id=?",
                         r ->
                                 new MediaTrack(
                                         song(r),
                                         r.getString(7),
                                         r.getString(8),
                                         r.getString(9),
-                                        r.getString(10)),
+                                        r.getString(10),
+                                        0,
+                                        r.getString(12),
+                                        null),
                         id)
                 .stream()
                 .findFirst()
