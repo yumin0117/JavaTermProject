@@ -1,6 +1,6 @@
 {
   "tool": "Oracle SQL Developer 26.2.0.186.2220",
-  "method": "Tools > Database Export wizard; DDL + INSERT, UTF-8; public copy excludes a temporary private payment row",
+  "method": "Tools > Database Export wizard; DDL + INSERT, UTF-8; public copy excludes a private payment row",
   "file": "sql/07_final_sqldeveloper_export.sql",
   "tableCount": 11,
   "insertCounts": {
