@@ -61,7 +61,11 @@ final class AlbumArt implements Icon {
                                 }
                             } catch (Exception ignored) {
                             } finally {
-                                SwingUtilities.invokeLater(c::repaint);
+                                SwingUtilities.invokeLater(() -> {
+                                    for (Window window : Window.getWindows()) {
+                                        if (window.isDisplayable()) window.repaint();
+                                    }
+                                });
                             }
                         });
         }

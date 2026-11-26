@@ -84,9 +84,9 @@ public final class MusicArt extends JComponent implements Icon {
             g.setColor(Color.WHITE);
             g.setFont(new Font("Segoe UI", Font.BOLD, 13));
             g.drawString(
-                    new String[] {"NOCTURNE", "FANTAISIE", "WALTZ", "CHOPIN"}[variant], 18, 173);
+                    new String[] {"MUSE", "MUSIC", "PLAYLIST", "LIBRARY"}[variant], 18, 173);
             g.setFont(new Font("Segoe UI", Font.PLAIN, 8));
-            g.drawString("THE PIANO COLLECTION", 18, 187);
+            g.drawString("YOUR MUSIC COLLECTION", 18, 187);
         }
         g.dispose();
     }
