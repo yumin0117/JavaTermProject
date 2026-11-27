@@ -50,7 +50,12 @@ public final class AlbumDialog extends JDialog {
         root.add(Ui.scroll(body), BorderLayout.CENTER);
         root.add(
                 Ui.row(
-                        Ui.primary("재생", () -> play.accept(track)),
+                        Ui.primary(
+                                "재생",
+                                () -> {
+                                    dispose();
+                                    play.accept(track);
+                                }),
                         Ui.quiet("정보 새로고침", () -> load(true)),
                         Ui.quiet("닫기", this::dispose)),
                 BorderLayout.SOUTH);

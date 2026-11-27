@@ -39,7 +39,10 @@ public final class MainFrame extends JFrame {
     private String page = "홈", filter = "전체";
     private boolean loading, updatingSlider, limitAnnounced;
     private MediaTrack selected;
+    private OnlineVideoPanel onlinePlayer;
+    private boolean onlineMode;
     private Set<Long> favoriteIds = Set.of();
+    private Map<Long, String> videoStates = Map.of();
     private final JButton favoriteButton = Ui.quiet("☆", () -> toggleFavorite(footerTrack()));
 
     public MainFrame() {
@@ -64,7 +67,14 @@ public final class MainFrame extends JFrame {
                         24,
                         Ui.ACCENT,
                         () -> {
-                            if (player.playing()) {
+                            if (onlineMode
+                                    && onlinePlayer != null
+                                    && selected != null
+                                    && onlinePlayer.link() != null
+                                    && onlinePlayer.link().songId() == selected.song().id()) {
+                                if (!page.equals("지금 재생 중")) navigate("지금 재생 중");
+                                onlinePlayer.togglePause();
+                            } else if (player.playing()) {
                                 player.togglePause();
                             } else if (selected != null) play(selected);
                         });
@@ -87,6 +97,7 @@ public final class MainFrame extends JFrame {
                     public void windowClosed(WindowEvent e) {
                         clock.stop();
                         player.close();
+                        if (onlinePlayer != null) onlinePlayer.close();
                     }
                 });
         render();
@@ -108,6 +119,7 @@ public final class MainFrame extends JFrame {
         String[][] items = {
             {"홈", "home"},
             {"전체 곡", "music"},
+            {"지금 재생 중", "play"},
             {"즐겨찾기 곡", "star"},
             {"내 플레이리스트", "library"},
             {"공개 플레이리스트", "search"}
@@ -136,11 +148,11 @@ public final class MainFrame extends JFrame {
         plus.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         JPanel words = Ui.column();
         words.setOpaque(false);
-        words.add(Ui.text("muse plus", 18, true));
+        words.add(Ui.text("공식 뮤직비디오", 18, true));
         words.add(Box.createVerticalStrut(8));
-        words.add(Ui.muted("1분을 넘어, 음악 끝까지."));
+        words.add(Ui.muted("앱 안에서 음악과 영상을 함께."));
         plus.add(words, BorderLayout.CENTER);
-        JButton more = Ui.button("이용권 알아보기", this::openMembership);
+        JButton more = Ui.button("지금 재생 중 보기", () -> navigate("지금 재생 중"));
         more.setFont(more.getFont().deriveFont(11f));
         plus.add(more, BorderLayout.SOUTH);
         sidebar.add(plus);
@@ -215,15 +227,28 @@ public final class MainFrame extends JFrame {
         JSlider volume = new JSlider(0, 100, 65);
         volume.setPreferredSize(new Dimension(85, 25));
         volume.setToolTipText("음량");
-        volume.addChangeListener(e -> player.volume(volume.getValue() / 100f));
-        JPanel right = Ui.row(new JLabel(new MuseIcon("volume", 19, Ui.MUTED)), volume, planButton);
-        right.setPreferredSize(new Dimension(265, 55));
+        volume.addChangeListener(
+                e -> {
+                    player.volume(volume.getValue() / 100f);
+                    if (onlinePlayer != null) onlinePlayer.volume(volume.getValue() / 100f);
+                });
+        JPanel right = new JPanel();
+        right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
+        right.add(new JLabel(new MuseIcon("volume", 19, Ui.MUTED)));
+        right.add(Box.createHorizontalStrut(8));
+        right.add(volume);
+        right.add(Box.createHorizontalStrut(10));
+        right.add(planButton);
+        right.setPreferredSize(new Dimension(280, 55));
         footer.add(right, BorderLayout.EAST);
         progress.setToolTipText("재생 위치 · 무료 이용은 1분까지 이동할 수 있습니다.");
         progress.addChangeListener(
                 e -> {
-                    if (!updatingSlider && !progress.getValueIsAdjusting())
-                        player.seek(progress.getValue());
+                    if (!updatingSlider && !progress.getValueIsAdjusting()) {
+                        if (onlineMode && onlinePlayer != null)
+                            onlinePlayer.seek(progress.getValue());
+                        else player.seek(progress.getValue());
+                    }
                 });
         return footer;
     }
@@ -243,6 +268,8 @@ public final class MainFrame extends JFrame {
     }
 
     private void navigate(String next) {
+        if (onlinePlayer != null && page.equals("지금 재생 중") && !next.equals("지금 재생 중"))
+            onlinePlayer.pause();
         page = next;
         filter = "전체";
         search.setText("");
@@ -276,7 +303,8 @@ public final class MainFrame extends JFrame {
                         ps.mine(),
                         publicLists,
                         membershipService.status(),
-                        new FavoriteService(resolved).ids());
+                        new FavoriteService(resolved).ids(),
+                        new OnlineVideoService().states());
             }
 
             protected void done() {
@@ -293,7 +321,9 @@ public final class MainFrame extends JFrame {
                     shared = d.shared();
                     pass = d.pass();
                     favoriteIds = d.favorites();
+                    videoStates = d.videos();
                     player.updatePass(pass);
+                    if (onlinePlayer != null) onlinePlayer.updatePass(pass);
                     connection.setText("");
                 } catch (Exception e) {
                     library = null;
@@ -320,9 +350,11 @@ public final class MainFrame extends JFrame {
             List<Playlist> mine,
             List<Playlist> shared,
             PassStatus pass,
-            Set<Long> favorites) {}
+            Set<Long> favorites,
+            Map<Long, String> videos) {}
 
     private void render() {
+        if (onlinePlayer != null && !page.equals("지금 재생 중")) onlinePlayer.pause();
         for (var entry : navigation.entrySet()) {
             boolean on = entry.getKey().equals(page);
             entry.getValue()
@@ -336,6 +368,18 @@ public final class MainFrame extends JFrame {
         }
         sectionTitle.setText(page);
         content.removeAll();
+        if (page.equals("지금 재생 중")) {
+            if (onlinePlayer == null) {
+                content.add(
+                        empty("재생할 곡을 선택해 주세요", "곡을 더블클릭하거나 하단 재생 버튼을 누르면 공식 영상이 앱 안에서 열립니다."),
+                        BorderLayout.CENTER);
+            } else content.add(onlinePlayer, BorderLayout.CENTER);
+            content.revalidate();
+            content.repaint();
+            updatePassLabel();
+            updateFavoriteButton();
+            return;
+        }
         JPanel body = Ui.column();
         body.setBorder(BorderFactory.createEmptyBorder(24, 32, 26, 32));
         if (!connection.getText().isBlank()) {
@@ -464,6 +508,10 @@ public final class MainFrame extends JFrame {
         words.add(title);
         words.add(Box.createVerticalStrut(5));
         words.add(Ui.muted(track.song().artists()));
+        words.add(
+                Ui.quiet(
+                        track.playable() ? "▶ 재생" : videoLabel(track.song().id()),
+                        () -> play(track)));
         card.add(words, BorderLayout.SOUTH);
         MouseAdapter click =
                 new MouseAdapter() {
@@ -485,7 +533,7 @@ public final class MainFrame extends JFrame {
         body.add(Box.createVerticalStrut(22));
         JPanel pills = Ui.row();
         pills.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        for (String category : new String[] {"전체", "즐겨찾기", "음원 연결됨"}) {
+        for (String category : new String[] {"전체", "즐겨찾기"}) {
             JButton b =
                     Ui.button(
                             category,
@@ -506,7 +554,7 @@ public final class MainFrame extends JFrame {
                                 t ->
                                         switch (filter) {
                                             case "즐겨찾기" -> favoriteIds.contains(t.song().id());
-                                            case "음원 연결됨" -> t.playable();
+                                            case "MP3 연결됨" -> t.playable();
                                             default -> true;
                                         })
                         .filter(
@@ -534,6 +582,15 @@ public final class MainFrame extends JFrame {
                                     : "다른 제목이나 가수 이름으로 검색해 보세요."));
     }
 
+    private String videoLabel(long id) {
+        return switch (videoStates.getOrDefault(id, "SEARCH")) {
+            case "PLAYABLE" -> "▶ 영상";
+            case "METADATA" -> "영상 확인";
+            case "UNAVAILABLE" -> "재생 제한";
+            default -> "미연결";
+        };
+    }
+
     private JComponent songTable(List<MediaTrack> rows) {
         DefaultTableModel model = Ui.model("#", "곡 / 가수", "앨범", "재생", "담기", "별");
         for (int i = 0; i < rows.size(); i++) {
@@ -543,7 +600,7 @@ public final class MainFrame extends JFrame {
                         i + 1,
                         s.title(),
                         s.album(),
-                        rows.get(i).playable() ? s.duration() : "정보",
+                        rows.get(i).playable() ? s.duration() : videoLabel(s.id()),
                         "+",
                         favoriteIds.contains(s.id()) ? "★" : "☆"
                     });
@@ -551,7 +608,7 @@ public final class MainFrame extends JFrame {
         JTable table = Ui.table(model);
         table.setRowHeight(58);
         table.getColumnModel().getColumn(0).setMaxWidth(42);
-        table.getColumnModel().getColumn(3).setMaxWidth(67);
+        table.getColumnModel().getColumn(3).setMaxWidth(90);
         table.getColumnModel().getColumn(4).setMaxWidth(42);
         table.getColumnModel().getColumn(5).setMaxWidth(42);
         table.getColumnModel()
@@ -604,6 +661,8 @@ public final class MainFrame extends JFrame {
                             if (e.getClickCount() == 1) toggleFavorite(rows.get(row));
                         } else if (column == 4) {
                             if (e.getClickCount() == 1) addSelected();
+                        } else if (column == 3) {
+                            if (e.getClickCount() == 1) play(rows.get(row));
                         } else if (column == 2
                                 || (column == 1
                                         && e.getX() - table.getCellRect(row, 1, true).x < 45)) {
@@ -637,10 +696,7 @@ public final class MainFrame extends JFrame {
                                 ? "내 취향으로 채운 음악들을 한곳에."
                                 : "다른 사람의 취향을 발견하고 좋아요로 저장하세요."));
         body.add(Box.createVerticalStrut(25));
-        List<Playlist> rows =
-                page.equals("내 플레이리스트")
-                        ? mine
-                        : shared;
+        List<Playlist> rows = page.equals("내 플레이리스트") ? mine : shared;
         if (rows.isEmpty()) {
             append(
                     body,
@@ -721,32 +777,31 @@ public final class MainFrame extends JFrame {
     private void play(MediaTrack track) {
         if (!requireConnection()) return;
         if (!track.playable()) {
-            int choice =
-                    JOptionPane.showOptionDialog(
-                            this,
-                            "‘"
-                                    + track.song().title()
-                                    + "’ 곡 정보가 저장되어 있습니다.\n재생하려면 이 곡의 사용 권한이 있는 MP3 파일을 연결해 주세요.",
-                            "곡 정보 · " + track.song().artists(),
-                            JOptionPane.DEFAULT_OPTION,
-                            JOptionPane.INFORMATION_MESSAGE,
-                            null,
-                            new String[] {"MP3 음원 연결", "멜론에서 곡 보기", "닫기"},
-                            "닫기");
-            if (choice == 0) attachAudio(track);
-            else if (choice == 1) {
-                try {
-                    Desktop.getDesktop()
-                            .browse(
-                                    java.net.URI.create(
-                                            "https://www.melon.com/song/detail.htm?songId="
-                                                    + (track.song().id() - 1_000_000_000L)));
-                } catch (Exception e) {
-                    Ui.info(this, "웹 브라우저에서 멜론 곡 정보를 열 수 없습니다.");
-                }
-            }
+            Ui.work(
+                    this,
+                    () ->
+                            new OnlineStart(
+                                    new OnlineVideoService().resolve(track.song().id()),
+                                    membership.status()),
+                    data -> {
+                        player.stop();
+                        selected = track;
+                        onlineMode = true;
+                        if (onlinePlayer == null) onlinePlayer = new OnlineVideoPanel();
+                        pass = data.pass();
+                        onlinePlayer.updatePass(pass);
+                        onlinePlayer.play(track, data.link());
+                        page = "지금 재생 중";
+                        nowTitle.setText(track.song().title());
+                        nowArtist.setText(track.song().artists());
+                        nowArt.setIcon(new AlbumArt(track, 48));
+                        limitAnnounced = false;
+                        render();
+                    });
             return;
         }
+        if (onlinePlayer != null) onlinePlayer.pause();
+        onlineMode = false;
         Ui.work(
                 this,
                 () -> library.authorize(track.song().id()),
@@ -762,6 +817,8 @@ public final class MainFrame extends JFrame {
                     updateFavoriteButton();
                 });
     }
+
+    private record OnlineStart(OnlineVideo link, PassStatus pass) {}
 
     private void attachAudio(MediaTrack track) {
         JFileChooser chooser = new JFileChooser();
@@ -835,6 +892,27 @@ public final class MainFrame extends JFrame {
     }
 
     private void tick() {
+        if (onlineMode && onlinePlayer != null) {
+            var state = onlinePlayer.state();
+            playButton.setIcon(
+                    new MuseIcon(
+                            state.present() && !state.paused() ? "pause" : "play", 24, Ui.ACCENT));
+            if (!progress.getValueIsAdjusting()) {
+                updatingSlider = true;
+                progress.setMaximum(Math.max(1, (int) state.duration()));
+                progress.setValue((int) state.position());
+                updatingSlider = false;
+            }
+            time.setText(
+                    state.present()
+                            ? format(state.position()) + " / " + format(state.duration())
+                            : "불러오는 중");
+            playMode.setText(
+                    !onlinePlayer.unlimited() && state.minuteStopped()
+                            ? "1분 미리듣기가 끝났어요 · Plus로 전체 듣기"
+                            : onlinePlayer.unlimited() ? "Plus · 전체 재생" : "무료 · 1분 미리듣기");
+            return;
+        }
         playButton.setIcon(
                 new MuseIcon(
                         player.playing() && !player.paused() ? "pause" : "play", 24, Ui.ACCENT));
@@ -861,12 +939,13 @@ public final class MainFrame extends JFrame {
     }
 
     private void updatePassLabel() {
-        playMode.setText(pass.active() ? "Plus · 전체 듣기" : "무료 · 곡당 1분 미리듣기");
+        playMode.setText(pass.active() ? "Plus · 전체 재생" : "무료 · 1분 미리듣기");
         planButton.setText(pass.active() ? "Plus 이용 중" : "Plus 이용권");
     }
 
     private void openMembership() {
         if (!requireConnection()) return;
+        if (onlinePlayer != null) onlinePlayer.pause();
         new MembershipDialog(
                         this,
                         membership,

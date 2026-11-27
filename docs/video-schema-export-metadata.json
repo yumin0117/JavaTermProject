@@ -1,0 +1,31 @@
+{
+  "tool": "Oracle SQL Developer 26.2.0.186.2220",
+  "method": "Tools > Database Export wizard; DDL only; all schema objects; UTF-8",
+  "file": "sql/15_video_schema_sqldeveloper_export.sql",
+  "tableCount": 17,
+  "tables": [
+    "ALBUM_INFO",
+    "ARTIST",
+    "MELON_CHART",
+    "MELON_CHART_ENTRY",
+    "MEMBER",
+    "MEMBERSHIP_ORDER",
+    "MUSIC_CATALOG",
+    "PLAYLIST",
+    "PLAYLIST_LIKE",
+    "PLAYLIST_SONG",
+    "SONG",
+    "SONG_ARTIST",
+    "SONG_CREDIT",
+    "SONG_DETAIL",
+    "SONG_FAVORITE",
+    "SONG_MEDIA",
+    "SONG_VIDEO"
+  ],
+  "sha256": "58400912151f7e08d8a1addc12f791d1fa42ea24f09411f5f9cb35fb486735cc",
+  "dataFiles": [
+    "sql/11_library_facts_snapshot.sql",
+    "sql/14_youtube_links.sql"
+  ],
+  "notes": "Native DDL bytes preserved. Public catalog/video facts only in separate data SQL; no personal member/payment/favorite/browser data."
+}

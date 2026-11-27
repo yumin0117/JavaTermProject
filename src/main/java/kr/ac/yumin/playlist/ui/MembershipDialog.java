@@ -29,8 +29,8 @@ public final class MembershipDialog extends JDialog {
         top.add(Box.createVerticalStrut(10));
         top.add(Ui.text("좋아하는 음악을 끝까지.", 23, true));
         top.add(Box.createVerticalStrut(12));
-        top.add(Ui.muted("연결한 음원: 무료 1분  ·  Plus 이용권: 전체 길이 재생"));
-        top.add(Ui.muted("멜론 음원 스트리밍 권한은 포함되지 않습니다."));
+        top.add(Ui.muted("무료 등급: 1분 미리듣기  ·  Plus 등급: 전체 길이 재생"));
+        top.add(Ui.muted("과제에서 재생 등급을 확인하는 모의 이용권입니다."));
         top.add(Box.createVerticalStrut(22));
         top.add(Ui.text("30일 이용권   ₩4,900", 22, true));
         top.add(Box.createVerticalStrut(8));

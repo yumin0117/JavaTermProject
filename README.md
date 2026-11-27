@@ -1,118 +1,69 @@
 # muse · 음악 플레이리스트 공유 시스템
 
-Java 17 · Swing · Oracle JDBC · 앨범 정보 · 별 즐겨찾기 · MP3 재생
+Java 17 · Swing · Oracle JDBC · 앱 안에서 재생하는 공식 영상 · 앨범 정보 · 별 즐겨찾기
 
 [공개 저장소](https://github.com/yumin0117/JavaTermProject)
 
-![실제 Oracle 홈 화면](docs/screenshots/13_home_live.png)
+![앱 중앙에서 재생하는 공식 영상](docs/screenshots/28_in_app_mv_live.jpg)
 
 ## 실행
 
-이 PC에서는 `run.bat`을 실행하거나 IntelliJ IDEA 2025.3.3에서 `App.main()`을 실행한다.
-**로그인 창 없이 바로 홈이 열린다.** 미리 설정한 Oracle DB에서 음악과 개인 목록을 불러온다.
+이 PC에서는 `run.bat`을 실행한다. IntelliJ IDEA 2025.3.3에서는 `pom.xml`을 Maven 프로젝트로 열고 SDK 17, 작업 디렉터리 `JavaTermProject`, 실행 클래스 `kr.ac.yumin.playlist.App`을 지정한다. 로그인 없이 개인 보관함이 열린다.
 
-다른 PC에서는 다음 순서로 준비한다.
+다른 PC의 완전히 빈 실습 스키마에서는 SQL Developer F5로 다음 순서로 실행한다.
 
-1. `pom.xml`을 IntelliJ Maven 프로젝트로 열고 Project SDK와 Maven Runner JRE를 Java 17로 설정한다.
-2. 완전히 빈 실습 스키마라면 `sql/01_original_schema_and_seed.sql`과 `COMMIT;`을 실행한다. 기존 테이블이 있다면 이 파일을 다시 실행하지 않는다.
-3. `sql/02_add_sequence.sql` → `sql/06_music_and_membership.sql` → `sql/08_melon_chart.sql` → `sql/09_melon_snapshot.sql` → `sql/10_catalog_album_favorites.sql` → `sql/11_library_facts_snapshot.sql` 순서로 SQL Developer에서 F5로 실행한다.
-4. `config/db.properties.example`을 `config/db.properties`로 복사하여 입력한다.
-5. `App.main()`을 실행한다. Working directory는 이 `JavaTermProject` 폴더로 설정한다.
+`01` → `COMMIT;` → `02` → `06` → `08` → `09` → `10` → `11` → `13` → `14`
 
-```properties
-db.url=jdbc:oracle:thin:@localhost:1521:xe
-db.username=c##dbsoft
-db.password=실제_Oracle_비밀번호
-```
+기존 테이블이 있는 스키마에서 원본 01을 다시 실행하지 않는다. 추가 SQL은 기존 자료를 유지한다. 14 재실행은 이미 선택한 영상 연결을 덮어쓰지 않는다.
 
-SQL Developer 접속 이름 `c__dbsoft`와 실제 사용자명 `c##dbsoft`는 서로 다르다.
-설정 파일은 UTF-8 Java properties 형식이며 실제 비밀번호 파일은 Git에 포함하지 않는다.
-이 PC의 Java 17은 `%USERPROFILE%\.jdks\jdk-17.0.18+8`에 있다. Maven의 `package`를 실행하면 MP3와 드라이버가 포함된 `target/JavaTermProject-1.0.0.jar`가 생성된다.
+`config/db.properties.example`을 `config/db.properties`로 복사하여 Oracle 접속 정보를 입력한다. SQL Developer 접속 이름 `c__dbsoft`와 실제 사용자명 `c##dbsoft`는 다르다. 실제 비밀번호·개인 인증 정보·브라우저 캐시·사용자 MP3는 Git에서 제외한다.
 
 ```shell
-mvn clean package
-mvn -Poracle-test test
+mvn -Poracle-test package
 java -jar target/JavaTermProject-1.0.0.jar
 ```
 
+온라인 영상은 인터넷 연결이 필요하다. 첫 영상 실행 시 JCEF가 Chromium 구성 요소를 `.runtime/jcef`에 내려받으므로 잠시 걸릴 수 있다. 이 PC에는 설치가 완료되어 있다.
+
+## 재생과 모의 등급
+
+- 곡의 **영상** 버튼·더블클릭·홈 재생 버튼을 누르면 앱 중앙이 뮤비 플레이어로 바뀐다. 왼쪽 메뉴와 하단 플레이어는 유지된다.
+- 새 재생 창, 외부 브라우저, MP3 연결 안내창을 띄우지 않는다. YouTube 표준 임베드를 사용하여 오른쪽 추천 목록·댓글·구독 영역이 없다.
+- 무료 등급은 영상의 60초 지점에서 멈추고 60초 이후 재생을 제한한다. 사용자가 끄는 체크박스는 없다.
+- Plus 모의 결제가 Oracle에 저장되면 전체 길이를 재생한다. 최근 모의 결제를 취소하면 무료 제한을 다시 적용한다. 만료 시에도 무료 제한으로 전환한다.
+- 결제 표시는 4,900원/30일이지만 **실제 청구액은 0원**이다. 카드번호·결제사 API·실제 결제를 사용하지 않는다.
+- 표준 영상 컨트롤·YouTube 표시·광고를 유지한다. 영상 파일이나 MP3, 미디어 스트림 URL을 추출하거나 저장하지 않는다.
+- 다른 메뉴로 이동하면 온라인 영상은 일시정지한다. 이전/다음·위치 이동·음량·하단 재생 버튼을 실제 플레이어와 연결했다.
+
+## 곡과 데이터베이스
+
+실제 보관함 150곡, 앨범 141건, 곡-앨범 150건, 작사/작곡/편곡 크레딧 1,116건을 Oracle에 저장했다. 최초 차트 100곡과 추가 최신곡 50곡은 MUSIC_CATALOG를 기준으로 유지한다. 화면에서 TOP100 문구·곡 가져오기·연결 설정·좋아요한 목록 메뉴를 제거했다.
+
+2026-11-26 확인 기준으로 공식 영상 메타데이터 137곡을 연결했고 **119곡은 실제 앱의 임베드 재생을 확인했다.** 13곡은 공식 전체 영상을 확인하지 못했으며, 연결된 18곡은 임베드 제한/재생 미확인 상태다. 이 곡들은 `미연결` 또는 `재생 제한`으로 표시한다. 확인하지 못한 곡을 다른 곡·팬 영상·티저로 바꾸지 않는다. 공식 MV가 없는 경우 공식 음원 영상·공식 공연 영상을 구분하여 연결했다. [전체 연결 및 확인 상태](docs/youtube-links.json)
+
+`SONG_VIDEO`가 곡별 영상 ID·제목·채널·종류·검색어·확인 상태·확인 시각을 보관한다. 재생할 때 Oracle에서 곡과 현재 이용권을 조회한다. 브라우저 파일에 유료 여부를 저장하지 않는다. `PLAYABLE`은 해당 시점의 검증 기록이며 게시자·지역·삭제 정책에 따라 이후 재생 가능 여부가 달라질 수 있다. 앱의 `영상 변경`으로 다른 공식 주소를 연결할 수 있다.
+
 ## 구현 기능
 
-- 홈·전체 곡·내 플레이리스트·공개 플레이리스트
-- 제목/가수/앨범 검색, 즐겨찾기·음원 연결됨 필터
-- 하단·홈·목록의 앨범 커버 클릭 → 발매일·앨범 유형·장르·발매사·기획사·선택 곡의 작사/작곡/편곡
-- 하단 플레이어·목록·앨범 창의 별 저장/해제, 회원별 즐겨찾기 곡 조회
-- 플레이리스트 생성·조회·제목/설명/공개 수정·삭제
-- 실제 곡 담기·제거·위/아래 순서 교환, 공개 목록 좋아요·취소
-- 실제 MP3 재생·일시정지·구간 이동·이전/다음·볼륨
-- 무료 이용: 곡당 처음 60초까지 재생/이동, 끝나면 이용권 안내
-- Plus 30일 이용권: 전체 재생, DB 결제 이력, 최근 결제 취소
+- 제목·가수·앨범 검색, 전체 곡·즐겨찾기 곡·내 목록·공개 목록
+- 커버 클릭 → 발매일·유형·장르·발매사·기획사·선택 곡의 작사/작곡/편곡
+- 하단·목록·앨범 창의 별 저장/해제, 회원별 DB 저장 및 재실행 후 유지
+- 플레이리스트 생성·조회·수정·삭제, 곡 담기·제거·순서 변경, 공개 목록 좋아요·취소
+- 로그인 화면 없이 PC 전용 개인 회원을 생성·재사용하고 PBKDF2 인증과 소유권 검사는 유지
+- 모의 결제 UUID 중복 방지·회원 행 잠금·DB 시각으로 만료 확인·취소 이력 유지
 
-**결제는 과제용 모의 결제이며 실제 돈은 청구하지 않는다.** 표시 가격은 4,900원이지만 실제 청구액은 0원이다. 카드번호나 결제 API 키를 받지 않는다. 유효한 이용권이 없으면 실제 오디오 출력 프레임을 60초로 제한한다.
+기존 7개 테이블과 원본 예시 30건을 유지하고 총 17개 테이블로 확장했다. 앨범 정보는 ALBUM_INFO/SONG_DETAIL/SONG_CREDIT, 별은 SONG_FAVORITE, 개인 목록은 PLAYLIST/PLAYLIST_SONG, 모의 결제는 MEMBERSHIP_ORDER에서 읽는다. 연결 테이블과 외래키·복합 기본키·트랜잭션·PreparedStatement를 사용한다.
 
-## DB를 기준으로 동작하는 부분
+Swing 스타일은 `src/main/resources/theme/muse.properties`(FlatLaf)에서 관리한다. 예전 MP3 엔진과 권한 정책은 검증용 CC0 쇼팽 4곡으로 유지하며 기본 150곡에는 섞지 않는다. [음원 출처](docs/음원출처.md)
 
-곡 목록은 `MUSIC_CATALOG JOIN SONG LEFT JOIN SONG_MEDIA`, 소유 목록과 공개 목록은 `PLAYLIST`, 좋아요는 `PLAYLIST_LIKE`, 결제 상태는 `MEMBERSHIP_ORDER`에서 읽는다. 재생 시에도 서비스가 DB의 현재 시각과 유효기간을 조회한다. 결제 시 회원 행 잠금과 요청 UUID로 중복을 방지하고, 취소 시 기록을 남긴다. 로컬 파일에 결제 성공 여부나 플레이리스트 데이터를 대신 저장하지 않는다.
+## 제출 자료와 검증
 
-사용자가 요청한 대로 초기 로그인/회원가입 화면을 제거했다. 대신 `LocalProfileService`가 이 PC 전용 회원을 생성하고 PBKDF2 인증 후 사용한다. 기존 DEMO_HASH 계정을 로그인 우회에 사용하지 않는다. 개인 계정 식별자와 임의 인증 키는 `config/local-profile.properties`에만 보관하고 Git에서 제외한다. 이 파일을 없애면 새 보관함 계정이 만들어지므로 기존 개인 목록에 계속 접근하려면 보관한다. 비공개 접근·소유권 검사는 서비스와 SQL에서 유지된다.
+- `docs/기말보고서_2601110285_김유민.pdf`: 표지는 사용자가 직접 채우도록 항목 위치만 배치
+- `docs/design/er-final.svg`: 최종 17개 테이블 E-R 설계
+- `sql/15_video_schema_sqldeveloper_export.sql`: SQL Developer 내보내기 마법사로 생성한 현재 17개 테이블 DDL 원문
+- `sql/11_library_facts_snapshot.sql`, `sql/14_youtube_links.sql`: 공개 음악 정보·영상 연결 재현 SQL
+- `docs/전체소스코드.md`, `docs/검증결과.md`, `docs/테스트순서.md`
 
-기존 7개 테이블과 예시 30건은 유지한다. 첫 수집곡 100곡에 [멜론 최신곡](https://www.melon.com/new/index.htm) 50곡을 더해 **150곡**을 Oracle 음악 보관함에 저장했다. 화면에서는 요청대로 ‘멜론 TOP100’ 문구를 제거했다. 출처·수집 시점은 내부 자료에 보존한다.
+Java 17 + 실제 Oracle 테스트 20개가 통과했다. 별도 실제 플레이어 검증에서 무료 60.09초 정지, 무료 이어듣기 차단, Oracle 모의 구매 후 62초 이후 재생, 취소 후 제한 복귀를 확인했다. 테스트는 임시 회원의 데이터만 정리한다.
 
-`MUSIC_CATALOG`가 전체 보관함 곡을 관리하므로 차트에서 내려간 곡과 추가 수집곡도 사라지지 않는다. 추가 수집은 개발용 CatalogService에서 수행하며 앱 화면에는 가져오기 기능을 표시하지 않는다. 같은 곡은 기존 ID로 갱신하며 중복 행을 만들지 않는다. 곡 ID는 `1,000,000,000 + 멜론 곡 번호`, 가수 ID는 `2,000,000,000 + 멜론 가수 번호`로 유지한다.
-
-앨범 정보는 `ALBUM_INFO`, 곡-앨범 연결은 `SONG_DETAIL`, 작사/작곡/편곡은 `SONG_CREDIT`의 역할별 행으로 저장한다. 150곡의 발매·크레딧 정보를 수집했으며 앨범은 141개다. 커버 클릭 시 먼저 DB 캐시를 읽고, 없으면 공개 곡/앨범 페이지에서 필요한 사실만 수집한다. 가사·상업 음원은 수집하지 않는다. 원문에 없는 정보는 ‘제공된 정보 없음’으로 표시한다. 수록곡 영역은 이 보관함에 저장된 곡만 표시한다.
-
-별 즐겨찾기는 `SONG_FAVORITE(member_id,song_id)` 복합 기본키로 회원별 저장한다. 창을 닫거나 프로그램을 재실행해도 유지되며 다른 회원의 별 상태와 분리된다. 기존 플레이리스트 좋아요와 별 즐겨찾기는 별도 기능이다.
-
-## 스타일과 음원 재생
-
-Swing은 웹 CSS를 직접 적용하지 않으므로 FlatLaf의 선언식 스타일 파일 `src/main/resources/theme/muse.properties`를 적용했다. 색상·글꼴·버튼·표·입력란을 이 파일에서 수정한다. 차트 커버는 멜론이 제공한 URL에서 비동기로 표시하고, 연결 실패 시 앱 자체 그래픽을 쓴다.
-
-**멜론 차트 정보 수집은 상업 음원 다운로드나 스트리밍 권한을 제공하지 않는다.** 보관함 곡은 음원 연결 전 ‘정보’ 상태로 표시한다. 곡을 더블클릭하면 멜론 곡 페이지를 열거나 해당 곡의 사용 권한이 있는 MP3를 연결할 수 있다. 연결한 파일은 `config/audio/`에 보관하고 공개 Git에서 제외한다. 곡·파일 연결과 확인한 길이는 DB에 저장하며, 연결 후 무료 60초/모의 Plus 전체 길이 재생이 적용된다. 모의 이용권에는 멜론 스트리밍 권한이 포함되지 않는다.
-
-오디오 엔진 검증용으로 CC0 쇼팽 녹음 4개를 별도 유지했다. 기본 TOP100에는 포함하지 않는다. [음원 출처](docs/음원출처.md)와 `docs/audio-sources.json`에 원본·라이선스·해시가 기록되어 있다. 상업 곡 제목에 다른 녹음을 연결해 재생되는 것처럼 표시하지 않는다.
-
-## 폴더 구조
-
-```text
-config/               외부 접속 정보 예시, 실제 설정·개인 인증 정보는 Git 제외
-src/main/java/kr/ac/yumin/playlist/
-  App.java            로그인 없이 메인 앱 실행
-  config/             Oracle 설정과 연결
-  model/              회원·곡·플레이리스트·음원·결제·이용권
-  dao/                PreparedStatement와 조회/변경 SQL
-  service/            권한·트랜잭션·모의 결제·재생 권한
-  audio/              실제 MP3 디코딩/출력, 60초 제한 정책
-  ui/                 메인·앨범·상세·목록 편집·이용권 화면
-src/main/resources/
-  theme/muse.properties
-  audio/              CC0 실제 MP3 4개
-src/test/java/        기본·실제 Oracle·오디오 검증 및 화면 캡처 도구
-sql/                  원본 SQL, 실제 SQL Developer 내보내기, 추가 마이그레이션
-docs/                 최종 PDF, 전체 소스, ER SVG, 캡처, 테스트 기록
-tools/                DB 초기 추가 SQL 실행과 문서 재생성
-```
-
-## 제출 자료
-
-- [보고서 PDF](docs/기말보고서_2601110285_김유민.pdf): 표지는 직접 작성하도록 항목 위치만 마련했다.
-- `sql/04_sqldeveloper_export.sql`: 최초 7개 테이블/30건의 SQL Developer 내보내기 원본
-- `sql/06_music_and_membership.sql`: 실제 곡/음원, 모의 결제 테이블 추가 SQL
-- `sql/07_final_sqldeveloper_export.sql`: 이전 11개 테이블 내보내기 공유본
-- `sql/08_melon_chart.sql`: 차트 스냅샷 테이블과 미확인 길이 NULL 허용
-- `sql/09_melon_snapshot.sql`: 수집한 실제 TOP100 100곡 재현용 SQL
-- `sql/10_catalog_album_favorites.sql`: 추가 테이블 5개 (총 16개)
-- `sql/11_library_facts_snapshot.sql`: 150곡·141앨범·크레딧 1,116건 재현용 공개 정보 SQL
-- `sql/12_final_schema_sqldeveloper_export.sql`: 최종 16개 테이블 SQL Developer DDL 내보내기
-- [파일별 전체 코드](docs/전체소스코드.md), [테스트 순서](docs/테스트순서.md), [검증 결과](docs/검증결과.md)
-
-SQL Developer 내보내기 07은 실제 마법사에서 생성한 파일의 공유본이다. 개인 보관함 회원은 예시 3명만 내보내도록 필터링했고, 개인 결제 INSERT 1줄은 공유본에서 제외했다. 로컬 스키마명·저장영역 설정과 DDL 구분자 형식이 포함되므로 다른 PC의 빈 스키마에는 원본 생성 SQL + 02 + 06 + 08 + 09 + 10 + 11 순서로 실행한다. 기존 DB에서 생성/복원 SQL을 중복 실행하지 않는다. 생성 방식과 검증한 행 수·해시는 `docs/sql-export-metadata.json`에 기록했다.
-
-## 검증
-
-Java 17 빌드와 테스트 17개가 실제 Oracle에서 통과했다. 기본 사운드 장치를 음량 0으로 열어 무료 60초 정지, 유료 61초 이후 재생, 일시정지·재개도 확인했다. 주요 화면 14개는 실제 DB에 새로 만든 임시 계정으로 캡처한 뒤 해당 임시 데이터만 정리했다. `ui.DesignCapture`는 디자인 QA 도구이며 운영 앱은 그 픽스처 데이터를 사용하지 않는다.
-
-시퀀스 번호와 신규 개인 계정은 정상적으로 증가한다. 시퀀스의 번호 공백은 롤백 시에도 발생할 수 있으며 오류가 아니다. 저장소의 DB 비밀번호·개인 인증 정보 제외 여부를 검증했다.
-
-최종 DDL 내보내기 12는 개인 회원·결제·즐겨찾기 데이터를 포함하지 않는다. 공개 음악 사실의 재현은 11을 사용한다. SQL Developer 내보내기 원문은 환경별 스키마·저장영역·구분자를 포함하므로 실행용 순서는 위 추가 SQL 안내를 따른다.
-
-화면 정리: 좋아요한 목록 메뉴, 곡 가져오기 버튼, 연결 설정 화면, 홈의 보관함 곡 수 문구를 제거했다. 별 즐겨찾기와 공개 플레이리스트의 좋아요 동작은 유지한다.
+공식 구현 문서: [JCEF Maven](https://github.com/jcefmaven/jcefmaven), [YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference), [플레이어 파라미터](https://developers.google.com/youtube/player_parameters).

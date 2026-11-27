@@ -12,3 +12,5 @@ sql/04_sqldeveloper_export.sql -text -diff
 sql/07_final_sqldeveloper_export.sql -text -diff
 sql/12_final_schema_sqldeveloper_export.sql -text -diff
 *.html text eol=lf
+*.jpg binary
+sql/15_video_schema_sqldeveloper_export.sql -text -diff

@@ -87,8 +87,10 @@ public final class DetailDialog extends JDialog {
                                 "선택 곡 듣기",
                                 () -> {
                                     int row = table.getSelectedRow();
-                                    if (row >= 0 && detail != null)
+                                    if (row >= 0 && detail != null) {
+                                        dispose();
                                         listen.accept(detail.songs().get(row));
+                                    }
                                 }),
                         like,
                         Ui.button("새로고침", this::reload),

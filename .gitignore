@@ -9,3 +9,4 @@ tmp/
 config/local-profile.properties
 config/local-profile.lock
 config/audio/
+.runtime/
