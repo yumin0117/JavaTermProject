@@ -36,7 +36,7 @@ public class ExportOnlineVideos {
                                 + " sa.song_id=s.song_id),v.youtube_video_id,v.youtube_title,v.channel_name,v.video_kind,v.search_query,v.match_status,TO_CHAR(v.checked_at,'YYYY-MM-DD"
                                 + " HH24:MI:SS') FROM MUSIC_CATALOG cat JOIN SONG s ON"
                                 + " s.song_id=cat.song_id JOIN SONG_VIDEO v ON v.song_id=s.song_id"
-                                + " ORDER BY s.song_id",
+                                + " WHERE cat.is_active='Y' ORDER BY s.song_id",
                             r ->
                                     new Video(
                                             r.getLong(1),
@@ -66,8 +66,9 @@ public class ExportOnlineVideos {
         snapshot.put("playableVerified", played);
         snapshot.put(
                 "note",
-                "PLAYABLE is a dated in-app embed check, not a guarantee of future regional"
-                        + " availability. SEARCH and UNAVAILABLE are not claimed as playable.");
+                "PLAYABLE is a dated in-app iframe or official watch-page playback check, not a"
+                    + " guarantee of future regional availability. SEARCH and UNAVAILABLE are not"
+                    + " claimed as playable.");
         snapshot.put("tracks", rows);
         Files.writeString(
                 Path.of("docs/youtube-links.json"),

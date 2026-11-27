@@ -1,9 +1,9 @@
 {
-  "checkedAt": "2026-11-26",
+  "checkedAt": "2026-11-27",
   "catalogCount": 150,
-  "metadataVerified": 137,
-  "playableVerified": 119,
-  "note": "PLAYABLE is a dated in-app embed check, not a guarantee of future regional availability. SEARCH and UNAVAILABLE are not claimed as playable.",
+  "metadataVerified": 150,
+  "playableVerified": 150,
+  "note": "PLAYABLE is a dated in-app iframe or official watch-page playback check, not a guarantee of future regional availability. SEARCH and UNAVAILABLE are not claimed as playable.",
   "tracks": [
     {
       "songId": 1004277838,
@@ -50,20 +50,20 @@
       "channel": "JYP Entertainment",
       "kind": "MV",
       "searchQuery": "예뻤어 DAY6 (데이식스) official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:27"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 13:01:21"
     },
     {
       "songId": 1030244931,
       "songTitle": "봄날",
       "artists": "방탄소년단",
-      "videoId": "xEeFrLSkMm8",
-      "title": "BTS (방탄소년단) '봄날 (Spring Day)' Official MV",
-      "channel": "HYBE LABELS",
-      "kind": "MV",
+      "videoId": "0Fb7R19Z3u0",
+      "title": "《Comeback Special》 BTS (방탄소년단) - Spring Day (봄날) @인기가요 Inkigayo 20170226",
+      "channel": "SBSKPOP X INKIGAYO",
+      "kind": "LIVE",
       "searchQuery": "봄날 방탄소년단 official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:25"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:15:29"
     },
     {
       "songId": 1030962526,
@@ -141,9 +141,13 @@
       "songId": 1033411344,
       "songTitle": "봄 내음보다 너를",
       "artists": "김나영",
-      "kind": "SEARCH",
+      "videoId": "RaTCjhIS4AY",
+      "title": "[MV] KimNaYoung(김나영) _ A Letter For You(봄 내음보다 너를)",
+      "channel": "1theK (원더케이)",
+      "kind": "MV",
       "searchQuery": "봄 내음보다 너를 김나영 official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:11"
     },
     {
       "songId": 1033496587,
@@ -230,6 +234,18 @@
       "checkedAt": "2026-11-26 14:32:23"
     },
     {
+      "songId": 1036599950,
+      "songTitle": "Super Shy",
+      "artists": "NewJeans",
+      "videoId": "ArmDp-zijuc",
+      "title": "NewJeans (뉴진스) 'Super Shy' Official MV",
+      "channel": "HYBE LABELS",
+      "kind": "MV",
+      "searchQuery": "NewJeans Super Shy official music video",
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:57:10"
+    },
+    {
       "songId": 1036617841,
       "songTitle": "Seven (feat. Latto) - Clean Ver.",
       "artists": "정국",
@@ -238,20 +254,20 @@
       "channel": "Jung Kook - Topic",
       "kind": "AUDIO",
       "searchQuery": "Seven (feat. Latto) - Clean Ver. 정국 official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:26"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:42"
     },
     {
       "songId": 1036699489,
       "songTitle": "그대만 있다면 (여름날 우리 X 너드커넥션 (Nerd Connection))",
       "artists": "너드커넥션 (Nerd Connection)",
-      "videoId": "fPJAxY6OtGM",
-      "title": "너드커넥션 (Nerd Connection) - 그대만 있다면 (여름날 우리 X 너드커넥션) [더 시즌즈-이영지의 레인보우] | KBS 241004 방송",
-      "channel": "KBS Kpop",
+      "videoId": "kPT2RjfCLdc",
+      "title": "너드커넥션 (NERD CONNECTION) - 그대만 있다면 (with THE CHAIRS) (Legacy Taipei live)",
+      "channel": "NERD CONNECTION",
       "kind": "LIVE",
       "searchQuery": "그대만 있다면 (여름날 우리 X 너드커넥션 (Nerd Connection)) 너드커넥션 (Nerd Connection) official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:23"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:14"
     },
     {
       "songId": 1036730261,
@@ -302,6 +318,18 @@
       "checkedAt": "2026-11-26 14:33:02"
     },
     {
+      "songId": 1037225604,
+      "songTitle": "EASY",
+      "artists": "LE SSERAFIM (르세라핌)",
+      "videoId": "bNKXxwOQYB8",
+      "title": "LE SSERAFIM (르세라핌) 'EASY' OFFICIAL MV",
+      "channel": "HYBE LABELS",
+      "kind": "MV",
+      "searchQuery": "LE SSERAFIM EASY official music video",
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:57:15"
+    },
+    {
       "songId": 1037228861,
       "songTitle": "천상연",
       "artists": "이창섭",
@@ -310,8 +338,8 @@
       "channel": "KBS Kpop",
       "kind": "LIVE",
       "searchQuery": "천상연 이창섭 official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:22"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:34:36"
     },
     {
       "songId": 1037323943,
@@ -374,6 +402,18 @@
       "checkedAt": "2026-11-26 14:32:36"
     },
     {
+      "songId": 1037524037,
+      "songTitle": "Supernova",
+      "artists": "aespa",
+      "videoId": "phuiiNCxRMg",
+      "title": "aespa 에스파 'Supernova' MV",
+      "channel": "SMTOWN",
+      "kind": "MV",
+      "searchQuery": "aespa Supernova official music video",
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:57:07"
+    },
+    {
       "songId": 1037901626,
       "songTitle": "Die With A Smile",
       "artists": "Lady Gaga, Bruno Mars",
@@ -382,8 +422,8 @@
       "channel": "LadyGagaVEVO",
       "kind": "MV",
       "searchQuery": "Die With A Smile Lady Gaga Bruno Mars official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:29"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:50"
     },
     {
       "songId": 1037928381,
@@ -478,8 +518,8 @@
       "channel": "OfficialGDRAGON",
       "kind": "AUDIO",
       "searchQuery": "HOME SWEET HOME (feat. 태양, 대성) G-DRAGON official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:22"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:38:34"
     },
     {
       "songId": 1038300904,
@@ -526,8 +566,8 @@
       "channel": "1theK (원더케이)",
       "kind": "MV",
       "searchQuery": "너에게 닿기를 10CM official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:26"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:37"
     },
     {
       "songId": 1038629386,
@@ -557,13 +597,13 @@
       "songId": 1039166708,
       "songTitle": "Golden",
       "artists": "EJAE, AUDREY NUNA, REI AMI, HUNTR/X, KPop Demon Hunters Cast",
-      "videoId": "TuzfXgUpboA",
-      "title": "Golden",
-      "channel": "HUNTR/X - Topic",
-      "kind": "AUDIO",
+      "videoId": "QtCbNDLeQGo",
+      "title": "“Golden” Official Choreography | KPop Demon Hunters | Netflix",
+      "channel": "Netflix",
+      "kind": "MV",
       "searchQuery": "Golden EJAE AUDREY NUNA REI AMI HUNTR/X KPop Demon Hunters Cast official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:32"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:17"
     },
     {
       "songId": 1039231685,
@@ -586,8 +626,8 @@
       "channel": "BLACKPINK",
       "kind": "MV",
       "searchQuery": "뛰어(JUMP) BLACKPINK official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:29"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:45"
     },
     {
       "songId": 1039307948,
@@ -809,9 +849,13 @@
       "songId": 1601983813,
       "songTitle": "외사랑 (feat. 최유리)",
       "artists": "진영 (GOT7)",
-      "kind": "SEARCH",
+      "videoId": "v8mCh6TZfEU",
+      "title": "One-sided love (feat. Choi Yu Ree)",
+      "channel": "Jinyoung - Topic",
+      "kind": "AUDIO",
       "searchQuery": "외사랑 (feat. 최유리) 진영 (GOT7) official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:18:56"
     },
     {
       "songId": 1602024048,
@@ -954,8 +998,8 @@
       "channel": "KBS Kpop",
       "kind": "LIVE",
       "searchQuery": "노스탈지아 BIG Naughty (서동현) official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:23"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:34:35"
     },
     {
       "songId": 1602940179,
@@ -1014,8 +1058,8 @@
       "channel": "이지금 [IU Official]",
       "kind": "MV",
       "searchQuery": "Dear my crazy soulmate 아이유 official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:26"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:40"
     },
     {
       "songId": 1603175883,
@@ -1026,8 +1070,8 @@
       "channel": "ALLDAY PROJECT",
       "kind": "LIVE",
       "searchQuery": "CRASH ALLDAY PROJECT official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:23"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:43:36"
     },
     {
       "songId": 1603339939,
@@ -1051,7 +1095,7 @@
       "kind": "MV",
       "searchQuery": "NEON A2O A2O LITE official music video",
       "status": "PLAYABLE",
-      "checkedAt": "2026-11-26 14:32:07"
+      "checkedAt": "2026-11-27 13:01:45"
     },
     {
       "songId": 1603448999,
@@ -1218,16 +1262,20 @@
       "channel": "DisneyMusicKoreaVEVO",
       "kind": "AUDIO",
       "searchQuery": "Magic (From \"헥스: 마녀왕국\"/Korean Single Version) RESCENE (리센느) official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:33"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:57:00"
     },
     {
       "songId": 1604054997,
       "songTitle": "안녕의 안녕",
       "artists": "신용재 (2F)",
-      "kind": "SEARCH",
+      "videoId": "8iHk1EiAIhg",
+      "title": "신용재 (2F) '안녕의 안녕' MV",
+      "channel": "신용재",
+      "kind": "MV",
       "searchQuery": "안녕의 안녕 신용재 (2F) official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:57:02"
     },
     {
       "songId": 1604055646,
@@ -1238,16 +1286,20 @@
       "channel": "Aden - Topic",
       "kind": "AUDIO",
       "searchQuery": "피노키오 </3 (feat. ILHOON) Aden (에이든) official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:30"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:53"
     },
     {
       "songId": 1604055740,
       "songTitle": "필사적 필사",
       "artists": "윤하 (YOUNHA)",
-      "kind": "SEARCH",
+      "videoId": "gq5hed-Z6Uw",
+      "title": "[Special Clip] 전지적 독자 시점 OST - 윤하 (YOUNHA) '필사적 필사 (The only manuscript)'",
+      "channel": "1theK (원더케이)",
+      "kind": "LIVE",
       "searchQuery": "필사적 필사 윤하 (YOUNHA) official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:20"
     },
     {
       "songId": 1604056009,
@@ -1262,14 +1314,6 @@
       "checkedAt": "2026-11-26 14:40:35"
     },
     {
-      "songId": 1604056541,
-      "songTitle": "사랑의 녹턴",
-      "artists": "INJAE(인재), Moah Lee",
-      "kind": "SEARCH",
-      "searchQuery": "사랑의 녹턴 INJAE(인재) Moah Lee official music video",
-      "status": "SEARCH"
-    },
-    {
       "songId": 1604057316,
       "songTitle": "올해 크리스마스엔 꼭",
       "artists": "이을 (E.ul)",
@@ -1278,8 +1322,8 @@
       "channel": "E.ul - Topic",
       "kind": "AUDIO",
       "searchQuery": "올해 크리스마스엔 꼭 이을 (E.ul) official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:33"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:57:05"
     },
     {
       "songId": 1604057708,
@@ -1354,14 +1398,6 @@
       "checkedAt": "2026-11-26 14:33:40"
     },
     {
-      "songId": 1604068347,
-      "songTitle": "좋은 꿈을 꿀 거야",
-      "artists": "109",
-      "kind": "SEARCH",
-      "searchQuery": "좋은 꿈을 꿀 거야 109 official music video",
-      "status": "SEARCH"
-    },
-    {
       "songId": 1604068446,
       "songTitle": "그날 우리처럼",
       "artists": "구슬요, 따린",
@@ -1377,9 +1413,13 @@
       "songId": 1604068465,
       "songTitle": "빵순이",
       "artists": "KODI GREEN",
-      "kind": "SEARCH",
+      "videoId": "PqeMvXb8kv8",
+      "title": "bread lover",
+      "channel": "Kodi Green - Topic",
+      "kind": "AUDIO",
       "searchQuery": "빵순이 KODI GREEN official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:22"
     },
     {
       "songId": 1604068496,
@@ -1481,9 +1521,13 @@
       "songId": 1604068612,
       "songTitle": "사탕",
       "artists": "예림",
-      "kind": "SEARCH",
+      "videoId": "MRXDLmaPpxc",
+      "title": "YERIM(예림) - Candy(사탕) | What a Boss Wants 보스의 노골적 취향 OST (Official Audio)",
+      "channel": "Ordinary Sounds",
+      "kind": "AUDIO",
       "searchQuery": "사탕 예림 official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:23"
     },
     {
       "songId": 1604068699,
@@ -1501,9 +1545,13 @@
       "songId": 1604068701,
       "songTitle": "Tree Tree Christmas Tree (feat. 손모은)",
       "artists": "강유현 (Kang yuhyun)",
-      "kind": "SEARCH",
+      "videoId": "RCvTOoOdFpg",
+      "title": "Tree Tree Christmas Tree (feat. MOEUN) [M/V]",
+      "channel": "강유현 KangYuHyun",
+      "kind": "MV",
       "searchQuery": "Tree Tree Christmas Tree (feat. 손모은) 강유현 (Kang yuhyun) official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:23"
     },
     {
       "songId": 1604069082,
@@ -1514,8 +1562,8 @@
       "channel": "HYUKOH",
       "kind": "MV",
       "searchQuery": "아님의 무게 혁오 (HYUKOH) official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:31"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:55"
     },
     {
       "songId": 1604069169,
@@ -1526,16 +1574,8 @@
       "channel": "Han All - Topic",
       "kind": "AUDIO",
       "searchQuery": "더 바랄 게 없어 한올 official music video",
-      "status": "UNAVAILABLE",
-      "checkedAt": "2026-11-26 14:40:32"
-    },
-    {
-      "songId": 1604069365,
-      "songTitle": "I LET YOU",
-      "artists": "Holynn (홀린)",
-      "kind": "SEARCH",
-      "searchQuery": "I LET YOU Holynn (홀린) official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:56:58"
     },
     {
       "songId": 1604069373,
@@ -1577,9 +1617,13 @@
       "songId": 1604069631,
       "songTitle": "Gone",
       "artists": "Enoch",
-      "kind": "SEARCH",
+      "videoId": "XXz8ba58N2Y",
+      "title": "Gone",
+      "channel": "Release - Topic",
+      "kind": "AUDIO",
       "searchQuery": "Gone Enoch official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:15:29"
     },
     {
       "songId": 1604069722,
@@ -1717,9 +1761,13 @@
       "songId": 1604083388,
       "songTitle": "지금을 사랑해",
       "artists": "솔플라워 (Sol' Flower)",
-      "kind": "SEARCH",
+      "videoId": "Q0oelTHLeqE",
+      "title": "Cherish This Moment",
+      "channel": "Sol' Flower - Topic",
+      "kind": "AUDIO",
       "searchQuery": "지금을 사랑해 솔플라워 (Sol' Flower) official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:12:25"
     },
     {
       "songId": 1604085572,
@@ -1737,9 +1785,13 @@
       "songId": 1604086160,
       "songTitle": "좋아 좋아져",
       "artists": "이레",
-      "kind": "SEARCH",
+      "videoId": "6X4nne244ZU",
+      "title": "[MV] Ireh(이레) _ So Good, Getting Better(좋아 좋아져)",
+      "channel": "1theK (원더케이)",
+      "kind": "MV",
       "searchQuery": "좋아 좋아져 이레 official music video",
-      "status": "SEARCH"
+      "status": "PLAYABLE",
+      "checkedAt": "2026-11-27 12:19:46"
     },
     {
       "songId": 1604086371,

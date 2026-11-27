@@ -46,7 +46,7 @@ public class OnlineVideoSmoke {
                                 JFrame f = new JFrame("muse · 온라인 재생 검증");
                                 f.setContentPane(p);
                                 f.setSize(1250, 850);
-                                f.setLocation(-10000, -10000);
+                                f.setLocationRelativeTo(null);
                                 f.setVisible(true);
                                 p.play(selected, link);
                                 return p;
@@ -61,6 +61,14 @@ public class OnlineVideoSmoke {
             var playing = p.state();
             if (!playing.present() || playing.paused() || playing.duration() < 65)
                 throw new IllegalStateException("공식 임베드 재생 실패: " + playing);
+            if (args.length > 1 && args[1].equals("require-watch")) {
+                long fullscreenUntil = System.currentTimeMillis() + 12000;
+                while (System.currentTimeMillis() < fullscreenUntil && !p.watchFullscreen())
+                    Thread.sleep(100);
+                if (!p.watchMode() || !p.watchFullscreen())
+                    throw new IllegalStateException("공식 웹 플레이어 전체화면 표시 실패");
+                System.out.println("WATCH_FULLSCREEN_SUCCESS");
+            }
             edt(
                     () -> {
                         p.seek(59);

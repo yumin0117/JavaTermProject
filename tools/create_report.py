@@ -41,9 +41,9 @@ p('음악 플레이리스트 공유 시스템 · muse','sub')
 p('muse는 실제 곡과 앨범 정보를 Oracle에 저장하고, 좋아하는 곡을 플레이리스트로 구성하여 공유하는 Java 데스크톱 프로그램이다. 로그인 화면 없이 개인 보관함으로 시작한다. 공식 영상을 앱 중앙에서 재생한다. 무료 등급은 60초에서 멈추고 Oracle에 저장한 과제용 모의 Plus 등급은 전체 길이를 재생한다. 실제 청구액은 0원이다.')
 p('주제 선정 이유','sub')
 p('음악을 취향과 상황에 따라 모으는 과정에는 회원, 곡, 아티스트, 플레이리스트, 좋아요 등 여러 관계가 생긴다. 이 관계를 정규화하고 JDBC CRUD로 연결하면 데이터 모델과 실제 프로그램의 관계를 이해하기 쉽다. 차트 수집 시점과 순위를 별도로 보존하고 결제 이력까지 확장하여 트랜잭션, 중복 방지, 권한 검사를 함께 학습한다.')
-table([['영역','구현 내용'],['곡 데이터','실제 150곡의 제목·가수·앨범·커버, 141앨범의 발매 정보와 1,116개 크레딧'],['GUI','홈, 커버 카드, 검색, 순위 필터, 개인/공개 목록, 고정 플레이어'],['JDBC CRUD','목록 생성·조회·수정·삭제, 곡 담기·제거·순서 변경, 좋아요와 취소'],['곡 추가와 별','최신곡/곡 번호 수집 → DB 보관함 유지, 회원별 별 저장과 해제'],['재생과 이용권','공식 임베드 영상과 실제 MP3 출력, 공식 영상의 무료 60초 제한, 모의 구매·취소와 DB 이력']],[105,W-105])
+table([['영역','구현 내용'],['곡 데이터','실제 150곡의 제목·가수·앨범·커버, 141앨범의 발매 정보와 1,135개 크레딧'],['GUI','홈, 커버 카드, 검색, 순위 필터, 개인/공개 목록, 고정 플레이어'],['JDBC CRUD','목록 생성·조회·수정·삭제, 곡 담기·제거·순서 변경, 좋아요와 취소'],['곡 추가와 별','최신곡/곡 번호 수집 → DB 보관함 유지, 회원별 별 저장과 해제'],['재생과 이용권','공식 임베드 영상과 실제 MP3 출력, 공식 영상의 무료 60초 제한, 모의 구매·취소와 DB 이력']],[105,W-105])
 p('사용 환경','sub');p('IntelliJ IDEA 2025.3.3 / Java 17 / Maven / Swing + FlatLaf / Oracle XE / ojdbc11 / jsoup / Java Sound + MP3SPI / JCEF Chromium / YouTube IFrame API. 초기 로그인 절차는 없지만 개인 보관함 인증과 DB의 소유권 검사는 유지한다.')
-p('차트 정보 수집과 음원 재생은 별개다. 멜론의 상업 음원을 다운로드하거나 스트리밍 권한을 부여하지 않는다. 곡별 공식 영상 ID와 확인 상태를 DB에 보관한다. 미연결/재생 제한 곡은 구분하여 표시하고 다른 곡으로 대체하지 않는다.','small')
+p('차트 정보 수집과 음원 재생은 별개다. 멜론의 상업 음원을 다운로드하거나 스트리밍 권한을 부여하지 않는다. 곡별 공식 영상 ID와 확인 상태를 DB에 보관한다. 활성 150곡의 앱 내부 재생을 확인했다. 미재생 31곡 중 28곡을 복구하고 3곡은 실제 K-pop 곡으로 교체했다. 클래식은 보관함에 없다.','small')
 
 page();heading(2,'데이터베이스 E-R 설계')
 p('기존 7개 테이블에 음원·모의 결제·차트 관계를 추가한 기본 11개 관계다. 다음 페이지에서 앨범·즐겨찾기·영상 6개 테이블을 확장해 최종 17개를 구성한다. 연결 테이블로 곡-가수, 목록-곡, 회원-목록의 다대다 관계를 표현한다.','small')
@@ -70,7 +70,7 @@ page();heading(3,'앨범·별 즐겨찾기 E-R 확장')
 p('이 페이지의 6개 신규 테이블을 앞의 11개 테이블에 연결하여 최종 17개 테이블을 구성했다. SONG과 MEMBER는 앞 그림에 있는 테이블이며 연결을 설명하기 위해 다시 표시했다.')
 d2=Drawing(510,420)
 extension={'SONG_VIDEO':(380,340),'SONG':(10,220),'MUSIC_CATALOG':(200,340),'SONG_DETAIL':(200,220),'ALBUM_INFO':(380,220),'SONG_CREDIT':(10,80),'SONG_FAVORITE':(200,80),'MEMBER':(380,80)}
-labels={'SONG_VIDEO':'PK, FK song_id / video metadata','SONG':'existing PK song_id','MEMBER':'existing PK member_id','MUSIC_CATALOG':'PK, FK song_id','SONG_DETAIL':'PK, FK song_id / FK album_id','ALBUM_INFO':'PK album_id','SONG_CREDIT':'PK song_id / role / order','SONG_FAVORITE':'PK, FK member_id / song_id'}
+labels={'SONG_VIDEO':'PK, FK song_id / video metadata','SONG':'existing PK song_id','MEMBER':'existing PK member_id','MUSIC_CATALOG':'PK, FK song_id / is_active','SONG_DETAIL':'PK, FK song_id / FK album_id','ALBUM_INFO':'PK album_id','SONG_CREDIT':'PK song_id / role / order','SONG_FAVORITE':'PK, FK member_id / song_id'}
 def extedge(points,label,x,y):
  d2.add(PolyLine(points,strokeColor=colors.HexColor('#A4A0AF'),strokeWidth=1));d2.add(String(x,y,label,fontName='Korean',fontSize=8,fillColor=GRAY))
 extedge([70,270,70,365,200,365],'1 : 0..1',100,372)
@@ -85,11 +85,11 @@ for name,(x,y) in extension.items():
  d2.add(String(x+6,y+31,name,fontName='KoreanBold',fontSize=8,fillColor=INK));d2.add(String(x+6,y+13,labels[name],fontName='Korean',fontSize=5.9,fillColor=GRAY))
 d2.scale(W/510,W/510);d2.width=W;d2.height=420*W/510;story.append(d2)
 renderSVG.drawToFile(d2,str(ROOT/'docs/design/er-extensions.svg'))
-table([['테이블','역할'],['MUSIC_CATALOG','전체 보관함. 추가 수집곡도 유지하고 같은 곡의 중복 등록 방지'],['ALBUM_INFO / SONG_DETAIL','앨범 사실과 곡-앨범 외래키. 발매일·장르·발매사·기획사·출처'],['SONG_CREDIT','곡별 작사/작곡/편곡을 역할과 순번으로 나누어 저장'],['SONG_FAVORITE','회원-곡 복합 기본키. 회원별 별 저장/해제와 재실행 후 유지'],['SONG_VIDEO','공식 영상 ID·채널·종류·확인 상태와 시각. SONG 외래키']],[160,W-160])
-p('공개 음악 정보는 150곡, 141개 앨범, 150개 곡-앨범 연결, 1,116개 크레딧 행이다. 개인 즐겨찾기는 공개 데이터 재현 SQL에서 제외한다.','small')
+table([['테이블','역할'],['MUSIC_CATALOG','활성 보관함. is_active로 보관 곡과 화면 노출을 구분'],['ALBUM_INFO / SONG_DETAIL','앨범 사실과 곡-앨범 외래키. 발매일·장르·발매사·기획사·출처'],['SONG_CREDIT','곡별 작사/작곡/편곡을 역할과 순번으로 나누어 저장'],['SONG_FAVORITE','회원-곡 복합 기본키. 회원별 별 저장/해제와 재실행 후 유지'],['SONG_VIDEO','공식 영상 ID·채널·종류·확인 상태와 시각. SONG 외래키']],[160,W-160])
+p('공개 음악 정보는 150곡, 141개 앨범, 150개 곡-앨범 연결, 1,135개 크레딧 행이다. 개인 즐겨찾기는 공개 데이터 재현 SQL에서 제외한다.','small')
 
 page();heading(4,'Java와 JDBC 구현')
-table([['구성','책임'],['MainFrame / AlbumDialog','음악 앱·앨범 정보·별 즐겨찾기, SwingWorker로 DB 작업 분리'],['LocalProfileService','이 PC의 개인 회원 생성·재사용, PBKDF2 인증'],['CatalogService / AlbumService','최신곡·개별 곡 추가, 앨범·발매일·작사/작곡 수집과 DB 캐시'],['DAO / PlaylistService','PreparedStatement, 자원 종료, 소유권·공개 범위·CRUD·순서 행 잠금'],['MusicLibraryService','보관함과 음원 LEFT JOIN, 재생 전 DB의 파일·이용권 조회'],['LocalAudioService / AudioPlayer','보유 MP3 연결과 길이 확인, 실제 PCM 출력, 60초 프레임 제한'],['MembershipService','DB 시각으로 만료 확인, UUID로 중복 결제 방지, 구매·취소 이력 보존'],['OnlineVideoPanel / Service','앱 중앙 표준 임베드 재생, DB 영상·등급 조회, 무료 60초/Plus 전체']],[155,W-155])
+table([['구성','책임'],['MainFrame / AlbumDialog','음악 앱·앨범 정보·별 즐겨찾기, SwingWorker로 DB 작업 분리'],['LocalProfileService','이 PC의 개인 회원 생성·재사용, PBKDF2 인증'],['CatalogService / AlbumService','최신곡·개별 곡 추가, 앨범·발매일·작사/작곡 수집과 DB 캐시'],['DAO / PlaylistService','PreparedStatement, 자원 종료, 소유권·공개 범위·CRUD·순서 행 잠금'],['MusicLibraryService','보관함과 음원 LEFT JOIN, 재생 전 DB의 파일·이용권 조회'],['LocalAudioService / AudioPlayer','보유 MP3 연결과 길이 확인, 실제 PCM 출력, 60초 프레임 제한'],['MembershipService','DB 시각으로 만료 확인, UUID로 중복 결제 방지, 구매·취소 이력 보존'],['OnlineVideoPanel / Service','앱 중앙 임베드/공식 페이지 재생, DB 등급, 무료 60초/Plus 전체']],[155,W-155])
 p('데이터 정확성과 기존 자료 보존','sub')
 p('기존 예시 30건을 삭제하지 않는다. 차트 곡 ID는 1,000,000,000 + 멜론 곡 번호, 가수 ID는 2,000,000,000 + 멜론 가수 번호로 매핑한다. 원문에 없는 재생 길이·장르·발매일은 임의 생성하지 않는다. 길이는 NULL을 허용하도록 추가 SQL에서 변경하고 기존 양수 CHECK는 유지한다. MP3를 연결하면 확인한 길이를 DB에 기록한다.')
 p('트랜잭션과 접근 제어','sub')
@@ -109,8 +109,8 @@ p('생성한 목록의 제목·설명·공개 여부를 수정하고 곡을 추�
 page();heading(8,'무료 1분과 모의 Plus 결제');image('18_free_pass_live.png',260);image('19_paid_pass_live.png',260)
 p('영상과 연결한 음원은 무료 상태에서 첫 60초까지 재생한다. Plus 30일 이용권은 표시 금액 4,900원의 과제용 모의 결제이며 실제 청구액은 0원이다. 구매 후 Oracle의 결제 이력과 유효기간을 읽어 전체 길이 재생을 허용한다. 멜론 스트리밍 권한은 포함하지 않는다.','small')
 
-page();heading(9,'앱 안의 뮤비와 등급별 재생');image('28_in_app_mv_live.jpg',350);image('21_cancelled_pass_live.png',205)
-p('재생 버튼을 누르면 새 창 없이 앱 중앙에서 표준 YouTube 임베드 영상을 재생한다. 오른쪽 추천 목록·댓글 영역이 없다. 무료 등급은 60초에서 멈추며 끄는 체크박스가 없다. Oracle 모의 구매 후 62초 이후 재생과 취소 후 제한 복귀를 확인했다. 137곡의 영상 메타데이터 중 119곡의 실제 임베드 재생을 확인했다. 미연결 13곡과 제한/미확인 18곡은 구분한다.','small')
+page();heading(9,'앱 안의 뮤비와 등급별 재생');image('28_in_app_mv_live.jpg',310);image('21_cancelled_pass_live.png',180)
+p('재생 버튼을 누르면 새 창 없이 앱 중앙에서 공식 영상을 재생한다. 오른쪽 추천 목록·댓글 영역이 없다. 무료는 60초에서 멈추며 모의 Plus는 전체 길이를 재생한다. 구매 후 62초 이후 재생과 취소 후 제한 복귀를 확인했다. 활성 150곡 모두 재생 확인했다. 임베드 제한 곡은 공식 페이지의 표준 전체화면으로 표시한다. 28곡을 복구하고 3곡은 Supernova·Super Shy·EASY로 교체했다.','small')
 p('결제 취소는 CANCELLED 이력으로 유지된다. 다른 유효 주문이 없으면 무료 상태로 돌아가며 기존 재생을 중지하고 권한을 다시 조회한다.','small')
 
 page();heading(10,'앨범 커버로 보는 발매·크레딧');image('25_album_info_live.png',475)
@@ -124,9 +124,9 @@ p('상단은 별표한 곡을 모아 보는 화면이고, 하단은 앨범 창�
 page();heading(12,'검증 결과와 실행 방법')
 table([['검증','결과'],['Java 17 Maven package','실행 JAR 생성 성공, 실제 Oracle 포함 20 tests / failures 0 / errors 0'],['CoreTest 3개','해시·salt·DEMO 인증 거부·입력 검증'],['PlaybackTest 4개','무료·유료·만료/취소 정책, CC0 MP3 4개 실제 디코딩'],['OracleIntegrationTest 1개','CRUD·접근 제어·좋아요·순서·동시 변경·롤백·원본 보존'],['MusicOracleTest 1개','자동 보관함 재사용, 보관함 조회, 중복 결제·취소·재구매'],['MelonChartTest 2개','실제 수집 스냅샷 파싱, 부분 차트·중복 순위 거부'],['LocalAudioOracleTest 1개','실제 MP3 연결·길이 확인·음원 없는 곡 재생 거부'],['AlbumFactsTest 2개','실제 발매일·다중 작사/작곡·필수 정보·최신곡 파싱'],['FavoriteOracleTest 3개','별 저장/해제·회원 분리·중복 방지, 상세 갱신 롤백, 재수집 중복 방지'],['OnlineVideoTest / OracleTest 3개','영상 주소 검증, 150곡 DB 연결·외래키·저장 ID 조회']],[155,W-155])
 p('IntelliJ 실행','sub')
-p('① pom.xml을 Maven 프로젝트로 열고 SDK를 Java 17로 설정한다.<br/>② 빈 스키마에서만 원본 SQL 01을 실행한다. 기존 DB에서는 재실행하지 않는다.<br/>③ 추가 SQL 02 → 06 → 08 → 09 → 10 → 11 → 13 → 14를 SQL Developer에서 F5로 실행한다.<br/>④ 접속 설정 후 App.main()을 실행한다. 빌드 후에는 run.bat으로 실행할 수 있다.')
+p('① pom.xml을 Maven 프로젝트로 열고 SDK를 Java 17로 설정한다.<br/>② 빈 스키마에서만 원본 SQL 01을 실행한다. 기존 DB에서는 재실행하지 않는다.<br/>③ 추가 SQL 02 → 06 → 08 → 09 → 10 → 16 → 11 → 13 → 14 → 17를 SQL Developer에서 F5로 실행한다.<br/>④ 접속 설정 후 App.main()을 실행한다. 빌드 후에는 run.bat으로 실행할 수 있다.')
 p('제출 자료와 출처','sub')
-p('공개 저장소: https://github.com/yumin0117/JavaTermProject<br/>보고서 PDF·E-R SVG·주요 화면·Java 소스·SQL Developer 최종 17개 테이블 DDL 내보내기 15·음악 정보 재현 SQL 11를 포함한다. 표지는 직접 작성하도록 항목 위치만 마련했다. 제출 커밋명은 “★ 기말과제제출 ★”이다.','small')
+p('공개 저장소: https://github.com/yumin0117/JavaTermProject<br/>보고서 PDF·E-R SVG·주요 화면·Java 소스·SQL Developer 최종 17개 테이블 DDL 내보내기 18·음악 정보 재현 SQL 11를 포함한다. 표지는 직접 작성하도록 항목 위치만 마련했다. 제출 커밋명은 “★ 기말과제제출 ★”이다.','small')
 p('차트: https://www.melon.com/chart/index.htm (2026.11.26 11:00 KST)<br/>파서: https://jsoup.org / 테마: https://www.formdev.com/flatlaf/<br/>오디오 검증: https://archive.org/details/musopen-chopin (CC0 1.0)<br/>영상 API: https://developers.google.com/youtube/iframe_api_reference','small')
 out=ROOT/'docs/기말보고서_2601110285_김유민.pdf'
 doc=SimpleDocTemplate(str(out),pagesize=A4,rightMargin=50,leftMargin=50,topMargin=48,bottomMargin=60,title='muse - 음악 플레이리스트 공유 시스템',author='')

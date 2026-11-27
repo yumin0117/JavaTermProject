@@ -18,7 +18,7 @@ import java.util.concurrent.*;
 
 import javax.swing.*;
 
-/** Standard visible YouTube embed, controlled through the documented IFrame API. */
+/** Visible official YouTube player, using an iframe or the official watch page's fullscreen UI. */
 public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
     public record State(
             double position,
@@ -36,7 +36,8 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
                         return t;
                     });
     private static CompletableFuture<CefApp> engine;
-    private final JPanel surface = new JPanel(new BorderLayout());
+    private final JPanel surface = new JPanel(new CardLayout());
+    private final JLabel placeholder = Ui.muted("");
     private final JLabel heading = Ui.text("공식 뮤직비디오", 16, true),
             status = Ui.muted("YouTube 공식 플레이어");
     private volatile State state = new State(0, 0, true, false, false, false);
@@ -45,10 +46,14 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
     private CefClient client;
     private CefBrowser browser;
     private YouTubePlayerPage page;
-    private OnlineVideo link;
+    private volatile OnlineVideo link;
     private MediaTrack track;
     private boolean disposed, initializing, mutedForTest;
     private volatile boolean playbackRequested;
+    private volatile boolean watchMode, watchFullscreen;
+    private volatile String pendingWatchUrl;
+    private int fullscreenAttempts, stableButton, lastButtonX, lastButtonY;
+    private long lastFullscreenAttempt;
     private float volume = .65f;
     private PassStatus pass = PassStatus.free();
     private long premiumDeadline;
@@ -61,6 +66,8 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
         header.add(Ui.row(Ui.quiet("영상 변경", this::changeVideo)), BorderLayout.EAST);
         add(header, BorderLayout.NORTH);
         surface.setBackground(Color.BLACK);
+        placeholder.setHorizontalAlignment(SwingConstants.CENTER);
+        surface.add(placeholder, "message");
         showMessage("곡을 선택하면 공식 영상이 앱 안에서 열립니다.");
         add(surface, BorderLayout.CENTER);
         status.setBorder(BorderFactory.createEmptyBorder(9, 20, 10, 20));
@@ -98,6 +105,9 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
 
     public void play(MediaTrack track, OnlineVideo link) {
         playbackRequested = true;
+        watchFullscreen = false;
+        fullscreenAttempts = 0;
+        stableButton = 0;
         this.track = track;
         this.link = link;
         generation++;
@@ -119,7 +129,10 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
         }
         if (browser != null) {
             showBrowser();
-            browser.loadURL(playerUrl());
+            if (watchMode) {
+                pendingWatchUrl = link.url();
+                browser.loadURL("about:blank");
+            } else browser.loadURL(playerUrl());
             return;
         }
         if (initializing) return;
@@ -148,79 +161,58 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
                                                                 String request,
                                                                 boolean persistent,
                                                                 CefQueryCallback callback) {
-                                                            try {
-                                                                if (page == null
-                                                                        || !b.getURL()
-                                                                                .startsWith(
-                                                                                        "http://127.0.0.1:")) {
-                                                                    callback.failure(
-                                                                            1,
-                                                                            "Unexpected player"
-                                                                                    + " origin");
-                                                                    return true;
-                                                                }
-                                                                JsonObject data =
-                                                                        JsonParser.parseString(
-                                                                                        request)
-                                                                                .getAsJsonObject();
-                                                                if (data.get("generation")
-                                                                                .getAsLong()
-                                                                        != generation) {
-                                                                    callback.success("");
-                                                                    return true;
-                                                                }
-                                                                state =
-                                                                        new State(
-                                                                                data.get("time")
-                                                                                        .getAsDouble(),
-                                                                                data.get("duration")
-                                                                                        .getAsDouble(),
-                                                                                data.get("paused")
-                                                                                        .getAsBoolean(),
-                                                                                false,
-                                                                                data.get("present")
-                                                                                        .getAsBoolean(),
-                                                                                data.get(
-                                                                                                "minuteStopped")
-                                                                                        .getAsBoolean());
-                                                                if (!playbackRequested
-                                                                        && !state.paused())
-                                                                    SwingUtilities.invokeLater(
-                                                                            OnlineVideoPanel.this
-                                                                                    ::pause);
-                                                                int code =
-                                                                        data.get("error")
-                                                                                .getAsInt();
-                                                                if (code != 0
-                                                                        && code != reportedError) {
-                                                                    reportedError = code;
-                                                                    SwingUtilities.invokeLater(
-                                                                            () ->
-                                                                                    status.setText(
-                                                                                            "앱 내 재생을"
-                                                                                                + " 사용할 수"
-                                                                                                + " 없는 영상입니다"
-                                                                                                + " ("
-                                                                                                    + code
-                                                                                                    + "). ‘영상"
-                                                                                                    + " 변경’으로"
-                                                                                                    + " 다른 공식"
-                                                                                                    + " 영상을 연결해"
-                                                                                                    + " 주세요."));
-                                                                }
-                                                                callback.success("");
-                                                                return true;
-                                                            } catch (Exception e) {
-                                                                callback.failure(
-                                                                        1, "Invalid player state");
-                                                                return true;
-                                                            }
+                                                            return onPlayerQuery(
+                                                                    b, frame, request, callback);
                                                         }
                                                     },
                                                     true);
                                             client.addMessageRouter(router);
+                                            client.addDisplayHandler(
+                                                    new CefDisplayHandlerAdapter() {
+                                                        @Override
+                                                        public void onAddressChange(
+                                                                CefBrowser b,
+                                                                CefFrame frame,
+                                                                String url) {
+                                                            if (frame.isMain())
+                                                                installWatchState(b, url);
+                                                        }
+
+                                                        @Override
+                                                        public void onFullscreenModeChange(
+                                                                CefBrowser b, boolean full) {
+                                                            if (watchMode) watchFullscreen = full;
+                                                        }
+                                                    });
                                             client.addLoadHandler(
                                                     new CefLoadHandlerAdapter() {
+                                                        @Override
+                                                        public void onLoadEnd(
+                                                                CefBrowser b,
+                                                                CefFrame frame,
+                                                                int code) {
+                                                            if (frame.isMain()) {
+                                                                String next = pendingWatchUrl;
+                                                                if (next != null
+                                                                        && "about:blank"
+                                                                                .equals(
+                                                                                        frame
+                                                                                                .getURL())) {
+                                                                    pendingWatchUrl = null;
+                                                                    b.loadURL(next);
+                                                                } else installWatchState(b);
+                                                            }
+                                                        }
+
+                                                        @Override
+                                                        public void onLoadingStateChange(
+                                                                CefBrowser b,
+                                                                boolean loading,
+                                                                boolean back,
+                                                                boolean forward) {
+                                                            if (!loading) installWatchState(b);
+                                                        }
+
                                                         @Override
                                                         public void onLoadError(
                                                                 CefBrowser b,
@@ -246,6 +238,138 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
                                                     client.createBrowser(playerUrl(), false, false);
                                             showBrowser();
                                         }));
+    }
+
+    private void installWatchState(CefBrowser b) {
+        installWatchState(b, b.getURL());
+    }
+
+    private void installWatchState(CefBrowser b, String url) {
+        OnlineVideo current = link;
+        if (watchMode
+                && current != null
+                && current.videoId().equals(OnlineVideoService.videoId(url)))
+            b.executeJavaScript(
+                    YouTubeWatchScript.build(
+                            generation,
+                            current.videoId(),
+                            remainingPremiumMillis(),
+                            volume,
+                            mutedForTest),
+                    url,
+                    0);
+    }
+
+    private boolean onPlayerQuery(
+            CefBrowser b, CefFrame frame, String request, CefQueryCallback callback) {
+        try {
+            boolean origin =
+                    frame.isMain()
+                            && (watchMode
+                                    ? link != null
+                                            && link.videoId()
+                                                    .equals(OnlineVideoService.videoId(b.getURL()))
+                                    : page != null && b.getURL().startsWith("http://127.0.0.1:"));
+            if (!origin) {
+                callback.failure(1, "Unexpected player origin");
+                return true;
+            }
+            JsonObject data = JsonParser.parseString(request).getAsJsonObject();
+            if (data.get("generation").getAsLong() != generation) {
+                callback.success("");
+                return true;
+            }
+            state =
+                    new State(
+                            data.get("time").getAsDouble(),
+                            data.get("duration").getAsDouble(),
+                            data.get("paused").getAsBoolean(),
+                            data.get("ad").getAsBoolean(),
+                            data.get("present").getAsBoolean(),
+                            data.get("minuteStopped").getAsBoolean());
+            if (!playbackRequested && !state.paused()) SwingUtilities.invokeLater(this::pause);
+            if (watchMode && data.has("fullscreen")) {
+                watchFullscreen = data.get("fullscreen").getAsBoolean();
+                int x = data.get("fullscreenX").getAsInt(), y = data.get("fullscreenY").getAsInt();
+                stableButton =
+                        Math.abs(x - lastButtonX) < 2 && Math.abs(y - lastButtonY) < 2
+                                ? stableButton + 1
+                                : 0;
+                lastButtonX = x;
+                lastButtonY = y;
+                if (playbackRequested
+                        && !watchFullscreen
+                        && x > 0
+                        && y > 0
+                        && stableButton >= 5
+                        && fullscreenAttempts < 3
+                        && System.nanoTime() - lastFullscreenAttempt > 1_200_000_000L) {
+                    lastFullscreenAttempt = System.nanoTime();
+                    fullscreenAttempts++;
+                    long expected = generation;
+                    SwingUtilities.invokeLater(
+                            () -> {
+                                if (!disposed
+                                        && watchMode
+                                        && generation == expected
+                                        && playbackRequested) {
+                                    browser.setFocus(true);
+                                    org.cef.browser.AppFullscreenInput.press(browser, x, y);
+                                }
+                            });
+                }
+            }
+            int code = data.get("error").getAsInt();
+            if (code != 0 && code != reportedError) {
+                reportedError = code;
+                if (!watchMode && (code == 101 || code == 150) && playbackRequested)
+                    SwingUtilities.invokeLater(this::openOfficialWatch);
+                else
+                    SwingUtilities.invokeLater(
+                            () ->
+                                    status.setText(
+                                            "이 영상은 현재 재생할 수 없습니다 ("
+                                                    + code
+                                                    + "). 다른 공식 영상을 연결해 주세요."));
+            }
+            callback.success("");
+            return true;
+        } catch (Exception e) {
+            callback.failure(1, "Invalid player state");
+            return true;
+        }
+    }
+
+    private long remainingPremiumMillis() {
+        return Math.max(
+                0,
+                java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(
+                        premiumDeadline - System.nanoTime()));
+    }
+
+    private void openOfficialWatch() {
+        if (disposed || watchMode || browser == null || link == null || !link.hasVideo()) return;
+        watchMode = true;
+        watchFullscreen = false;
+        reportedError = 0;
+        generation++;
+        fullscreenAttempts = 0;
+        stableButton = 0;
+        lastFullscreenAttempt = System.nanoTime();
+        state = new State(0, 0, true, false, false, false);
+        status.setText(
+                link.kindLabel()
+                        + " · YouTube 공식 플레이어 · "
+                        + (unlimited() ? "Plus 전체 재생" : "무료 1분 미리듣기"));
+        browser.loadURL(link.url());
+    }
+
+    public boolean watchMode() {
+        return watchMode;
+    }
+
+    public boolean watchFullscreen() {
+        return watchFullscreen;
     }
 
     private long premiumMillis() {
@@ -284,17 +408,16 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
     }
 
     private void showMessage(String text) {
-        surface.removeAll();
-        JLabel message = Ui.muted(text);
-        message.setHorizontalAlignment(SwingConstants.CENTER);
-        surface.add(message, BorderLayout.CENTER);
+        placeholder.setText(text);
+        ((CardLayout) surface.getLayout()).show(surface, "message");
         surface.revalidate();
         surface.repaint();
     }
 
     private void showBrowser() {
-        surface.removeAll();
-        surface.add(browser.getUIComponent(), BorderLayout.CENTER);
+        if (browser.getUIComponent().getParent() != surface)
+            surface.add(browser.getUIComponent(), "browser");
+        ((CardLayout) surface.getLayout()).show(surface, "browser");
         surface.revalidate();
         surface.repaint();
     }
@@ -331,6 +454,12 @@ public final class OnlineVideoPanel extends JPanel implements AutoCloseable {
     }
 
     public void togglePause() {
+        if (!watchMode && (reportedError == 101 || reportedError == 150)) {
+            playbackRequested = true;
+            openOfficialWatch();
+            return;
+        }
+
         playbackRequested = state.paused();
         execute(
                 "if(window.museReady){let"

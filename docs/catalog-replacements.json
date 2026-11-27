@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-11-27",
+  "policy": "No classical tracks in the active library. Original rows and playlist/favorite references are preserved; only catalog visibility changes.",
+  "tracks": [
+    {
+      "previousSongId": 1604056541,
+      "previousTitle": "사랑의 녹턴",
+      "replacementSongId": 1037524037,
+      "replacementTitle": "Supernova",
+      "artist": "aespa"
+    },
+    {
+      "previousSongId": 1604068347,
+      "previousTitle": "좋은 꿈을 꿀 거야",
+      "replacementSongId": 1036599950,
+      "replacementTitle": "Super Shy",
+      "artist": "NewJeans"
+    },
+    {
+      "previousSongId": 1604069365,
+      "previousTitle": "I LET YOU",
+      "replacementSongId": 1037225604,
+      "replacementTitle": "EASY",
+      "artist": "LE SSERAFIM (르세라핌)"
+    }
+  ]
+}

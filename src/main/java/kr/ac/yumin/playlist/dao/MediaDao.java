@@ -23,6 +23,7 @@ s.album_title,s.genre,s.duration_seconds,m.resource_path,m.performer,m.source_ur
 FROM MUSIC_CATALOG cat JOIN SONG s ON s.song_id=cat.song_id
 LEFT JOIN MELON_CHART_ENTRY e ON e.song_id=s.song_id AND e.chart_at=(SELECT MAX(chart_at) FROM MELON_CHART)
 LEFT JOIN SONG_MEDIA m ON m.song_id=s.song_id
+WHERE cat.is_active='Y'
 ORDER BY NVL(e.chart_rank,1000000),cat.added_at,s.song_id
 """,
                 r ->

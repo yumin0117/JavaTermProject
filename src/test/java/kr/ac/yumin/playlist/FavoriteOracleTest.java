@@ -50,8 +50,10 @@ class FavoriteOracleTest {
         }
         var importer = new CatalogService();
         long before;
+        long inactive;
         try (Connection c = Database.open()) {
             before = Jdbc.number(c, "SELECT COUNT(*) FROM MUSIC_CATALOG");
+            inactive = Jdbc.number(c, "SELECT COUNT(*) FROM MUSIC_CATALOG WHERE is_active='N'");
         }
         assertEquals(
                 0,
@@ -60,6 +62,9 @@ class FavoriteOracleTest {
                                 org.jsoup.Jsoup.parse(html, "https://www.melon.com/"))));
         try (Connection c = Database.open()) {
             assertEquals(before, Jdbc.number(c, "SELECT COUNT(*) FROM MUSIC_CATALOG"));
+            assertEquals(
+                    inactive,
+                    Jdbc.number(c, "SELECT COUNT(*) FROM MUSIC_CATALOG WHERE is_active='N'"));
         }
     }
 

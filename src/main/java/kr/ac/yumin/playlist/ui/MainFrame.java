@@ -24,6 +24,7 @@ public final class MainFrame extends JFrame {
     private PassStatus pass = PassStatus.free();
     private final AudioPlayer player = new AudioPlayer();
     private final JPanel content = new JPanel(new BorderLayout()), sidebar = Ui.column();
+    private final JPanel viewCards = new JPanel(new CardLayout());
     private final JLabel connection = Ui.muted("보관함을 연결하는 중입니다."),
             sectionTitle = Ui.text("둘러보기", 15, true);
     private final JTextField search = new JTextField(23);
@@ -59,7 +60,8 @@ public final class MainFrame extends JFrame {
         root.add(buildSidebar(), BorderLayout.WEST);
         JPanel main = new JPanel(new BorderLayout());
         main.add(buildHeader(), BorderLayout.NORTH);
-        main.add(content, BorderLayout.CENTER);
+        viewCards.add(content, "library");
+        main.add(viewCards, BorderLayout.CENTER);
         root.add(main, BorderLayout.CENTER);
         playButton =
                 iconButton(
@@ -367,13 +369,22 @@ public final class MainFrame extends JFrame {
                                     + "; borderWidth:0; arc:12");
         }
         sectionTitle.setText(page);
+        if (page.equals("지금 재생 중") && onlinePlayer != null) {
+            ((CardLayout) viewCards.getLayout()).show(viewCards, "video");
+            viewCards.revalidate();
+            viewCards.repaint();
+            updatePassLabel();
+            updateFavoriteButton();
+            return;
+        }
+        ((CardLayout) viewCards.getLayout()).show(viewCards, "library");
         content.removeAll();
         if (page.equals("지금 재생 중")) {
             if (onlinePlayer == null) {
                 content.add(
                         empty("재생할 곡을 선택해 주세요", "곡을 더블클릭하거나 하단 재생 버튼을 누르면 공식 영상이 앱 안에서 열립니다."),
                         BorderLayout.CENTER);
-            } else content.add(onlinePlayer, BorderLayout.CENTER);
+            }
             content.revalidate();
             content.repaint();
             updatePassLabel();
@@ -787,7 +798,10 @@ public final class MainFrame extends JFrame {
                         player.stop();
                         selected = track;
                         onlineMode = true;
-                        if (onlinePlayer == null) onlinePlayer = new OnlineVideoPanel();
+                        if (onlinePlayer == null) {
+                            onlinePlayer = new OnlineVideoPanel();
+                            viewCards.add(onlinePlayer, "video");
+                        }
                         pass = data.pass();
                         onlinePlayer.updatePass(pass);
                         onlinePlayer.play(track, data.link());
